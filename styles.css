@@ -223,7 +223,7 @@ ul li::before {
   background-color: var(--sticky-note);
   padding: 15px;
   right: 30px;
-  bottom: 30px;
+  top: 30px;
   box-shadow: 3px 3px 6px rgba(0,0,0,0.15);
   transform: rotate(3deg);
   z-index: 2; /* Ensure above other content */
