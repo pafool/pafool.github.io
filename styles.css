@@ -33,48 +33,39 @@
 
 html, body {
   height: 100%;
+  width: 100%;
   font-size: 16px;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
 }
 
 body {
   font-family: var(--body-font);
   line-height: 1.6;
   color: var(--text-color);
-  background-color: #e9e9e9;
-  margin: 0;
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+  background-color: var(--whiteboard-color);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
 }
 
 /* ===== Whiteboard Container ===== */
 .whiteboard-container {
   background-color: var(--whiteboard-color);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-  border: 15px solid var(--border-color);
-  border-radius: 5px;
-  width: 90%;
-  max-width: 1200px;
-  min-height: 85vh;
+  width: 100%;
+  min-height: 100vh;
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  overflow: visible;
 }
 
 /* Grid Pattern - fully responsive grid that covers the entire whiteboard */
 .whiteboard-container::before {
   content: "";
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
   width: 100%;
   height: 100%;
   background-image: 
@@ -82,7 +73,7 @@ body {
     linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
   pointer-events: none;
-  z-index: 1; /* Set a consistent z-index for the grid */
+  z-index: 0;
 }
 
 /* ===== Typography ===== */
@@ -147,7 +138,6 @@ ul li::before {
   padding: 15px 25px;
   position: relative;
   z-index: 2; /* Higher z-index than grid */
-  background: transparent; /* Make background transparent */
 }
 
 .whiteboard-title {
@@ -160,7 +150,6 @@ ul li::before {
   padding: var(--section-padding);
   position: relative;
   z-index: 2; /* Higher z-index than grid */
-  background: transparent; /* Make background transparent */
 }
 
 .whiteboard-footer {
@@ -170,7 +159,6 @@ ul li::before {
   color: #777;
   position: relative;
   z-index: 2; /* Higher z-index than grid */
-  background: transparent; /* Make background transparent */
 }
 
 .whiteboard-section {
@@ -208,35 +196,6 @@ ul li::before {
   margin-bottom: 0.5rem;
 }
 
-/* ===== Markers and Colors ===== */
-.marker-tray {
-  display: flex;
-  gap: 10px;
-}
-
-.marker {
-  width: 40px;
-  height: 12px;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.marker-blue {
-  background-color: var(--blue-marker);
-}
-
-.marker-red {
-  background-color: var(--red-marker);
-}
-
-.marker-green {
-  background-color: var(--green-marker);
-}
-
-.marker-black {
-  background-color: var(--black-marker);
-}
-
 /* ===== Whiteboard Cards and Elements ===== */
 .whiteboard-card {
   background-color: rgba(255, 255, 255, 0.6);
@@ -272,7 +231,7 @@ ul li::before {
 /* ===== Sticky Note ===== */
 .sticky-note {
   position: absolute;
-  width: 200px;
+  width: 220px;
   height: auto;
   background-color: var(--sticky-note);
   padding: 15px;
@@ -324,20 +283,11 @@ ul li::before {
   h2 {
     font-size: 2rem;
   }
-  
-  .whiteboard-container {
-    border-width: 12px;
-    min-height: auto;
-  }
 }
 
 @media (max-width: 768px) {
   :root {
     --grid-size: 20px;
-  }
-  
-  body {
-    padding: 10px;
   }
   
   h1 {
@@ -350,11 +300,6 @@ ul li::before {
   
   h3 {
     font-size: 1.4rem;
-  }
-  
-  .whiteboard-container {
-    border-width: 10px;
-    width: 95%;
   }
   
   .whiteboard-header {
@@ -377,11 +322,6 @@ ul li::before {
     --grid-size: 15px;
   }
   
-  .whiteboard-container {
-    border-width: 8px;
-    width: 100%;
-  }
-  
   .skill-columns {
     flex-direction: column;
     gap: 20px;
@@ -389,26 +329,5 @@ ul li::before {
   
   .skill-column {
     min-width: 100%;
-  }
-  
-  .marker {
-    width: 30px;
-    height: 10px;
-  }
-}
-
-/* Fix for Safari and other browsers to ensure grid covers the entire whiteboard */
-@supports (-webkit-overflow-scrolling: touch) {
-  .whiteboard-container::before {
-    width: 200%;
-    height: 200%;
-    transform: translate(-25%, -25%);
-  }
-}
-
-/* Additional landscape orientation fixes for grid */
-@media (orientation: landscape) {
-  .whiteboard-container::before {
-    background-attachment: fixed;
   }
 }
