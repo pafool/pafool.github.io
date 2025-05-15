@@ -65,7 +65,7 @@ body {
   flex-direction: column;
 }
 
-/* Grid Pattern */
+/* Grid Pattern - positioned as a full-size pseudo-element */
 .whiteboard-container::before {
   content: "";
   position: absolute;
@@ -78,7 +78,7 @@ body {
     linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
   pointer-events: none;
-  z-index: 0;
+  z-index: 1; /* Set a consistent z-index for the grid */
 }
 
 /* ===== Typography ===== */
@@ -140,9 +140,9 @@ ul li::before {
   justify-content: space-between;
   align-items: center;
   padding: 15px 25px;
-  border-bottom: 2px solid var(--grid-color);
   position: relative;
-  z-index: 2;
+  z-index: 2; /* Higher z-index than grid */
+  background: transparent; /* Make background transparent */
 }
 
 .whiteboard-title {
@@ -154,7 +154,8 @@ ul li::before {
   flex: 1;
   padding: var(--section-padding);
   position: relative;
-  z-index: 1;
+  z-index: 2; /* Higher z-index than grid */
+  background: transparent; /* Make background transparent */
 }
 
 .whiteboard-footer {
@@ -162,15 +163,22 @@ ul li::before {
   text-align: center;
   font-size: 0.9rem;
   color: #777;
-  border-top: 2px solid var(--grid-color);
   position: relative;
-  z-index: 2;
+  z-index: 2; /* Higher z-index than grid */
+  background: transparent; /* Make background transparent */
+}
+
+/* Remove the border lines that were breaking the grid */
+.whiteboard-header::after,
+.whiteboard-footer::before {
+  display: none;
 }
 
 .whiteboard-section {
   margin-bottom: 40px;
   padding-bottom: 20px;
   position: relative;
+  z-index: 2; /* Ensure content is above grid */
 }
 
 /* Add a slight rotation to elements for a hand-drawn feel */
@@ -258,6 +266,8 @@ h2.marker-black, h3.marker-black, p.marker-black, li.marker-black {
   box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
   transform: rotate(-0.3deg);
   transition: transform 0.3s ease;
+  position: relative;
+  z-index: 2; /* Ensure above grid */
 }
 
 .whiteboard-card:hover {
@@ -280,7 +290,7 @@ h2.marker-black, h3.marker-black, p.marker-black, li.marker-black {
 }
 
 .tag {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(255, 255, 255, 0.7);
   padding: 3px 10px;
   border-radius: 15px;
   font-size: 0.85rem;
@@ -299,6 +309,7 @@ h2.marker-black, h3.marker-black, p.marker-black, li.marker-black {
   box-shadow: 3px 3px 6px rgba(0,0,0,0.15);
   transform: rotate(3deg);
   transition: transform 0.2s ease;
+  z-index: 3; /* Higher z-index to ensure it's above other elements */
 }
 
 .sticky-note:hover {
