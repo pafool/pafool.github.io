@@ -195,8 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     markerElements.forEach(element => {
         element.addEventListener('mouseenter', () => {
-            // You could add a subtle sound effect here if desired
-            // For now, just add a subtle visual effect
+            // Add a subtle visual effect
             element.style.textShadow = '0 0 1px rgba(0,0,0,0.3)';
         });
         
@@ -223,7 +222,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (textElements.length > 0) {
                 const randomElement = textElements[Math.floor(Math.random() * textElements.length)];
-                const originalContent = randomElement.textContent;
                 const originalOpacity = randomElement.style.opacity;
                 
                 // Create erasing effect

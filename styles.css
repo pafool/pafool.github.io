@@ -3,14 +3,6 @@
    A classroom whiteboard-inspired design
 */
 
-@font-face {
-  font-family: 'WhiteboardFont';
-  src: url('../fonts/DryWhiteboardMarker-Regular.ttf') format('truetype'),
-       url('../fonts/DryWhiteboardMarker-Regular.otf') format('opentype');
-  font-weight: normal;
-  font-style: normal;
-}
-
 /* ===== Base Styles ===== */
 :root {
   /* Whiteboard Colors */
@@ -25,9 +17,9 @@
   --sticky-note: #fff7a0;
   --grid-size: 30px;
   
-  /* Typography */
-  --body-font: 'WhiteboardFont', 'Architects Daughter', 'Comic Sans MS', cursive;
-  --heading-font: 'WhiteboardFont', 'Architects Daughter', 'Comic Sans MS', cursive;
+  /* Typography - using web-safe handwriting fonts as fallbacks */
+  --body-font: 'Architects Daughter', 'Comic Sans MS', cursive;
+  --heading-font: 'Architects Daughter', 'Comic Sans MS', cursive;
   
   /* Spacing */
   --section-padding: 20px;
@@ -55,7 +47,7 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-image: url('https://www.transparenttextures.com/patterns/light-paper-fibers.png');
+  background-color: #e9e9e9;
 }
 
 /* ===== Whiteboard Container ===== */
@@ -149,6 +141,8 @@ ul li::before {
   align-items: center;
   padding: 15px 25px;
   border-bottom: 2px solid var(--grid-color);
+  position: relative;
+  z-index: 2;
 }
 
 .whiteboard-title {
@@ -169,6 +163,8 @@ ul li::before {
   font-size: 0.9rem;
   color: #777;
   border-top: 2px solid var(--grid-color);
+  position: relative;
+  z-index: 2;
 }
 
 .whiteboard-section {
