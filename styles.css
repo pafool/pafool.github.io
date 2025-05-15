@@ -1,6 +1,6 @@
 /* 
    Whiteboard Stylesheet for pafool.github.io
-   A classroom whiteboard-inspired design
+   A classroom whiteboard-inspired design with fully responsive grid
 */
 
 /* ===== Base Styles ===== */
@@ -10,7 +10,7 @@
   --border-color: #d0d0d0;
   --grid-color: rgba(0, 0, 0, 0.05);
   --text-color: #333;
-  --blue-marker: #1a75ff;
+  --blue-marker: #4169e1;
   --red-marker: #e63946;
   --green-marker: #2a9d8f;
   --black-marker: #333333;
@@ -31,23 +31,25 @@
   padding: 0;
 }
 
-html {
+html, body {
   height: 100%;
   font-size: 16px;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 body {
   font-family: var(--body-font);
   line-height: 1.6;
   color: var(--text-color);
-  background-color: #f0f0f0;
+  background-color: #e9e9e9;
   margin: 0;
   padding: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #e9e9e9;
 }
 
 /* ===== Whiteboard Container ===== */
@@ -65,7 +67,7 @@ body {
   flex-direction: column;
 }
 
-/* Grid Pattern - positioned as a full-size pseudo-element */
+/* Grid Pattern - fully responsive grid that covers the entire whiteboard */
 .whiteboard-container::before {
   content: "";
   position: absolute;
@@ -73,6 +75,8 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100%;
+  height: 100%;
   background-image: 
     linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
@@ -88,6 +92,7 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.3;
   font-weight: 700;
   position: relative;
+  color: var(--text-color);
 }
 
 h1 {
@@ -168,12 +173,6 @@ ul li::before {
   background: transparent; /* Make background transparent */
 }
 
-/* Remove the border lines that were breaking the grid */
-.whiteboard-header::after,
-.whiteboard-footer::before {
-  display: none;
-}
-
 .whiteboard-section {
   margin-bottom: 40px;
   padding-bottom: 20px;
@@ -181,13 +180,32 @@ ul li::before {
   z-index: 2; /* Ensure content is above grid */
 }
 
-/* Add a slight rotation to elements for a hand-drawn feel */
-.whiteboard-section:nth-child(odd) {
-  transform: rotate(-0.2deg);
+/* ===== Colored Sections - Black Text on Colored Background ===== */
+.blue-section, .red-section, .green-section {
+  padding: 10px 15px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  position: relative;
 }
 
-.whiteboard-section:nth-child(even) {
-  transform: rotate(0.3deg);
+.blue-section {
+  background-color: var(--blue-marker);
+}
+
+.red-section {
+  background-color: var(--red-marker);
+}
+
+.green-section {
+  background-color: var(--green-marker);
+}
+
+/* Ensure text in colored sections is black/white for readability */
+.blue-section h2, .blue-section h3,
+.red-section h2, .red-section h3,
+.green-section h2, .green-section h3 {
+  color: white;
+  margin-bottom: 0.5rem;
 }
 
 /* ===== Markers and Colors ===== */
@@ -205,55 +223,18 @@ ul li::before {
 
 .marker-blue {
   background-color: var(--blue-marker);
-  color: var(--blue-marker);
 }
 
 .marker-red {
   background-color: var(--red-marker);
-  color: var(--red-marker);
 }
 
 .marker-green {
   background-color: var(--green-marker);
-  color: var(--green-marker);
 }
 
 .marker-black {
   background-color: var(--black-marker);
-  color: var(--black-marker);
-}
-
-/* Text color classes */
-h2.marker-blue, h3.marker-blue, p.marker-blue, li.marker-blue {
-  color: var(--blue-marker);
-}
-
-h2.marker-red, h3.marker-red, p.marker-red, li.marker-red {
-  color: var(--red-marker);
-}
-
-h2.marker-green, h3.marker-green, p.marker-green, li.marker-green {
-  color: var(--green-marker);
-}
-
-h2.marker-black, h3.marker-black, p.marker-black, li.marker-black {
-  color: var(--black-marker);
-}
-
-/* ===== Erasers ===== */
-.erasers {
-  display: flex;
-  margin-left: 30px;
-  gap: 10px;
-}
-
-.eraser {
-  width: 50px;
-  height: 25px;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* ===== Whiteboard Cards and Elements ===== */
@@ -414,29 +395,20 @@ h2.marker-black, h3.marker-black, p.marker-black, li.marker-black {
     width: 30px;
     height: 10px;
   }
-  
-  .eraser {
-    width: 40px;
-    height: 20px;
+}
+
+/* Fix for Safari and other browsers to ensure grid covers the entire whiteboard */
+@supports (-webkit-overflow-scrolling: touch) {
+  .whiteboard-container::before {
+    width: 200%;
+    height: 200%;
+    transform: translate(-25%, -25%);
   }
 }
 
-/* Handwriting Animation Effect */
-@keyframes writing {
-  0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
-  100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
-}
-
-.intro-section h2,
-.intro-section h3,
-.intro-section p {
-  animation: writing 1.5s forwards;
-}
-
-.intro-section h3 {
-  animation-delay: 0.5s;
-}
-
-.intro-section p {
-  animation-delay: 1s;
+/* Additional landscape orientation fixes for grid */
+@media (orientation: landscape) {
+  .whiteboard-container::before {
+    background-attachment: fixed;
+  }
 }

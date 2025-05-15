@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pahul | Whiteboard</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Fallback web fonts that look handwritten, in case custom fonts fail -->
     <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -14,10 +13,6 @@
         <div class="whiteboard-header">
             <div class="whiteboard-title">
                 <h1>Pahul's Whiteboard</h1>
-                <div class="erasers">
-                    <div class="eraser"></div>
-                    <div class="eraser"></div>
-                </div>
             </div>
             <div class="marker-tray">
                 <div class="marker marker-blue"></div>
@@ -29,13 +24,17 @@
         
         <div class="whiteboard-content">
             <div class="whiteboard-section intro-section">
-                <h2 class="marker-blue">Hello, I'm Pahul</h2>
-                <h3 class="marker-blue">Software Developer & Problem Solver</h3>
+                <div class="blue-section">
+                    <h2>Hello, I'm Pahul</h2>
+                    <h3>Software Developer & Problem Solver</h3>
+                </div>
                 <p>I create innovative solutions through code and collaboration.</p>
             </div>
             
             <div class="whiteboard-section projects-section">
-                <h2 class="marker-red">Projects</h2>
+                <div class="red-section">
+                    <h2>Projects</h2>
+                </div>
                 <div class="whiteboard-card">
                     <h3>Project One</h3>
                     <p>Short description of your first project. What problem does it solve?</p>
@@ -56,7 +55,9 @@
             </div>
             
             <div class="whiteboard-section skills-section">
-                <h2 class="marker-green">Skills</h2>
+                <div class="green-section">
+                    <h2>Skills</h2>
+                </div>
                 <div class="skill-columns">
                     <div class="skill-column">
                         <h3>Languages</h3>
