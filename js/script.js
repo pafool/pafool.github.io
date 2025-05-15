@@ -1,186 +1,239 @@
-// Main JavaScript file for pafool.github.io
+// Whiteboard JavaScript for pafool.github.io
 
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     
-    // Mobile Navigation Toggle
-    const hamburger = document.querySelector('.hamburger');
-    const navMenu = document.querySelector('nav ul');
+    // Add a slight random rotation to text elements for a more hand-drawn feel
+    const textElements = document.querySelectorAll('h1, h2, h3, p, li');
     
-    if (hamburger) {
-        hamburger.addEventListener('click', function() {
-            hamburger.classList.toggle('active');
-            navMenu.classList.toggle('active');
-        });
-    }
-    
-    // Close mobile menu when clicking on a nav link
-    const navLinks = document.querySelectorAll('nav ul li a');
-    navLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            hamburger.classList.remove('active');
-            navMenu.classList.remove('active');
-        });
+    textElements.forEach(element => {
+        // Skip elements that already have marker classes to avoid overriding them
+        if (!element.classList.contains('marker-blue') && 
+            !element.classList.contains('marker-red') && 
+            !element.classList.contains('marker-green') &&
+            !element.classList.contains('marker-black')) {
+            
+            // Generate a small random rotation between -1 and 1 degrees
+            const randomRotation = (Math.random() * 2 - 1).toFixed(1);
+            element.style.transform = `rotate(${randomRotation}deg)`;
+        }
     });
     
-    // Project Filtering System
-    const filterButtons = document.querySelectorAll('.filter-btn');
-    const projectCards = document.querySelectorAll('.project-card');
+    // Make the whiteboard cards draggable for a more interactive experience
+    const whiteboardCards = document.querySelectorAll('.whiteboard-card');
     
-    if (filterButtons.length > 0) {
-        filterButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                // Remove active class from all buttons
-                filterButtons.forEach(btn => btn.classList.remove('active'));
-                
-                // Add active class to clicked button
-                button.classList.add('active');
-                
-                // Get filter value
-                const filterValue = button.getAttribute('data-filter');
-                
-                // Filter projects
-                projectCards.forEach(card => {
-                    if (filterValue === 'all') {
-                        card.style.display = 'block';
-                    } else {
-                        if (card.getAttribute('data-category') === filterValue) {
-                            card.style.display = 'block';
-                        } else {
-                            card.style.display = 'none';
-                        }
-                    }
-                });
-            });
-        });
-    }
-    
-    // Contact Form Validation
-    const contactForm = document.getElementById('contact-form');
-    
-    if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
+    whiteboardCards.forEach(card => {
+        // Add position relative and cursor grab to indicate draggability
+        card.style.position = 'relative';
+        card.style.cursor = 'grab';
+        
+        let isDragging = false;
+        let offsetX, offsetY;
+        
+        // Handle mouse events for dragging
+        card.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', endDrag);
+        
+        // Handle touch events for mobile dragging
+        card.addEventListener('touchstart', startDragTouch);
+        document.addEventListener('touchmove', dragTouch);
+        document.addEventListener('touchend', endDrag);
+        
+        function startDrag(e) {
+            isDragging = true;
+            const rect = card.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            card.style.cursor = 'grabbing';
+            card.style.zIndex = '100';
+        }
+        
+        function startDragTouch(e) {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                const touch = e.touches[0];
+                const rect = card.getBoundingClientRect();
+                offsetX = touch.clientX - rect.left;
+                offsetY = touch.clientY - rect.top;
+                card.style.zIndex = '100';
+            }
+        }
+        
+        function drag(e) {
+            if (!isDragging) return;
+            
+            // Get the container's boundaries
+            const container = document.querySelector('.whiteboard-content');
+            const containerRect = container.getBoundingClientRect();
+            
+            // Calculate new position while staying within boundaries
+            let newX = e.clientX - offsetX - containerRect.left;
+            let newY = e.clientY - offsetY - containerRect.top;
+            
+            // Apply the new position
+            card.style.position = 'absolute';
+            card.style.left = `${newX}px`;
+            card.style.top = `${newY}px`;
+        }
+        
+        function dragTouch(e) {
+            if (!isDragging || e.touches.length !== 1) return;
+            
+            const touch = e.touches[0];
+            
+            // Get the container's boundaries
+            const container = document.querySelector('.whiteboard-content');
+            const containerRect = container.getBoundingClientRect();
+            
+            // Calculate new position while staying within boundaries
+            let newX = touch.clientX - offsetX - containerRect.left;
+            let newY = touch.clientY - offsetY - containerRect.top;
+            
+            // Apply the new position
+            card.style.position = 'absolute';
+            card.style.left = `${newX}px`;
+            card.style.top = `${newY}px`;
+            
+            // Prevent scrolling while dragging
             e.preventDefault();
-            
-            // Basic form validation
-            let valid = true;
-            const name = document.getElementById('name');
-            const email = document.getElementById('email');
-            const subject = document.getElementById('subject');
-            const message = document.getElementById('message');
-            
-            // Check if fields are empty
-            if (!name.value.trim()) {
-                highlightField(name, true);
-                valid = false;
-            } else {
-                highlightField(name, false);
-            }
-            
-            if (!email.value.trim()) {
-                highlightField(email, true);
-                valid = false;
-            } else if (!isValidEmail(email.value)) {
-                highlightField(email, true);
-                valid = false;
-            } else {
-                highlightField(email, false);
-            }
-            
-            if (!subject.value.trim()) {
-                highlightField(subject, true);
-                valid = false;
-            } else {
-                highlightField(subject, false);
-            }
-            
-            if (!message.value.trim()) {
-                highlightField(message, true);
-                valid = false;
-            } else {
-                highlightField(message, false);
-            }
-            
-            if (valid) {
-                // Form is valid, display a message since this doesn't actually submit yet
-                alert('This form is not yet connected to a backend. In a real implementation, your message would be sent now. Please see the form disclaimer for setup information.');
-                
-                // Reset form
-                contactForm.reset();
-            }
-        });
-    }
+        }
+        
+        function endDrag() {
+            isDragging = false;
+            card.style.cursor = 'grab';
+        }
+    });
     
-    // Helper function to validate email format
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
+    // Make the sticky note draggable
+    const stickyNote = document.querySelector('.sticky-note');
     
-    // Helper function to highlight invalid fields
-    function highlightField(field, isInvalid) {
-        if (isInvalid) {
-            field.style.borderColor = '#dc3545';
-        } else {
-            field.style.borderColor = '';
+    if (stickyNote) {
+        stickyNote.style.position = 'absolute';
+        stickyNote.style.cursor = 'grab';
+        
+        let isDragging = false;
+        let offsetX, offsetY;
+        
+        // Mouse events
+        stickyNote.addEventListener('mousedown', startDragSticky);
+        document.addEventListener('mousemove', dragSticky);
+        document.addEventListener('mouseup', endDragSticky);
+        
+        // Touch events
+        stickyNote.addEventListener('touchstart', startDragStickyTouch);
+        document.addEventListener('touchmove', dragStickyTouch);
+        document.addEventListener('touchend', endDragSticky);
+        
+        function startDragSticky(e) {
+            isDragging = true;
+            const rect = stickyNote.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            stickyNote.style.cursor = 'grabbing';
+            stickyNote.style.zIndex = '100';
+        }
+        
+        function startDragStickyTouch(e) {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                const touch = e.touches[0];
+                const rect = stickyNote.getBoundingClientRect();
+                offsetX = touch.clientX - rect.left;
+                offsetY = touch.clientY - rect.top;
+                stickyNote.style.zIndex = '100';
+            }
+        }
+        
+        function dragSticky(e) {
+            if (!isDragging) return;
+            
+            // Get the container's boundaries
+            const container = document.querySelector('.whiteboard-content');
+            const containerRect = container.getBoundingClientRect();
+            
+            // Calculate new position while staying within boundaries
+            let newX = e.clientX - offsetX - containerRect.left;
+            let newY = e.clientY - offsetY - containerRect.top;
+            
+            // Apply the new position
+            stickyNote.style.left = `${newX}px`;
+            stickyNote.style.top = `${newY}px`;
+        }
+        
+        function dragStickyTouch(e) {
+            if (!isDragging || e.touches.length !== 1) return;
+            
+            const touch = e.touches[0];
+            
+            // Get the container's boundaries
+            const container = document.querySelector('.whiteboard-content');
+            const containerRect = container.getBoundingClientRect();
+            
+            // Calculate new position while staying within boundaries
+            let newX = touch.clientX - offsetX - containerRect.left;
+            let newY = touch.clientY - offsetY - containerRect.top;
+            
+            // Apply the new position
+            stickyNote.style.left = `${newX}px`;
+            stickyNote.style.top = `${newY}px`;
+            
+            // Prevent scrolling while dragging
+            e.preventDefault();
+        }
+        
+        function endDragSticky() {
+            isDragging = false;
+            if (stickyNote) {
+                stickyNote.style.cursor = 'grab';
+            }
         }
     }
     
-    // Smooth scrolling for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-            const targetId = this.getAttribute('href');
-            
-            if (targetId !== '#') {
-                e.preventDefault();
-                
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            }
+    // Add "marker squeak" sounds when interacting with whiteboard elements
+    const markerElements = document.querySelectorAll('.marker-blue, .marker-red, .marker-green, .marker-black');
+    
+    markerElements.forEach(element => {
+        element.addEventListener('mouseenter', () => {
+            // You could add a subtle sound effect here if desired
+            // For now, just add a subtle visual effect
+            element.style.textShadow = '0 0 1px rgba(0,0,0,0.3)';
+        });
+        
+        element.addEventListener('mouseleave', () => {
+            element.style.textShadow = 'none';
         });
     });
     
-    // Add animation when elements come into view
-    const animateOnScroll = () => {
-        const elements = document.querySelectorAll('.project-card, .skill-category, .service-card');
+    // Add eraser functionality - clicking an eraser will clear nearby text
+    const erasers = document.querySelectorAll('.eraser');
+    
+    erasers.forEach(eraser => {
+        eraser.style.cursor = 'pointer';
         
-        elements.forEach(element => {
-            const elementPosition = element.getBoundingClientRect().top;
-            const screenPosition = window.innerHeight;
+        eraser.addEventListener('click', () => {
+            // Visual feedback
+            eraser.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                eraser.style.transform = 'scale(1)';
+            }, 200);
             
-            if (elementPosition < screenPosition) {
-                element.style.opacity = '1';
-                element.style.transform = 'translateY(0)';
+            // Find a random paragraph or list item and "erase" it temporarily
+            const textElements = Array.from(document.querySelectorAll('p, li'));
+            
+            if (textElements.length > 0) {
+                const randomElement = textElements[Math.floor(Math.random() * textElements.length)];
+                const originalContent = randomElement.textContent;
+                const originalOpacity = randomElement.style.opacity;
+                
+                // Create erasing effect
+                randomElement.style.opacity = '0.2';
+                
+                // Restore after 2 seconds
+                setTimeout(() => {
+                    randomElement.style.opacity = originalOpacity || '1';
+                }, 2000);
             }
         });
-    };
-    
-    // Initial check and add event listener
-    window.addEventListener('scroll', animateOnScroll);
-    animateOnScroll();
-    
-    // GitHub API Integration
-    // Note: In a real implementation, you might want to use the GitHub API
-    // to display your actual repositories and contributions
-    // This would require setting up authentication or using a token
-    
-    // For now, we'll just create a placeholder for the future integration
-    const githubWidget = document.querySelector('.github-widget');
-    
-    if (githubWidget) {
-        // This placeholder could be replaced with actual GitHub API calls
-        const githubUsername = 'pafool';
-        
-        // You'd typically make an API call like:
-        // fetch(`https://api.github.com/users/${githubUsername}/repos`)
-        //   .then(response => response.json())
-        //   .then(data => {
-        //      // Process and display the repositories
-        //   });
-    }
+    });
 });
