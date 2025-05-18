@@ -1,83 +1,93 @@
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Animation sequence
+    // Animation elements
     const introContainer = document.querySelector('.intro-container');
     const whiteboardContainer = document.querySelector('.whiteboard-container');
     const book = document.querySelector('.book');
+    const bookContainer = document.querySelector('.book-container');
     const frontCover = document.querySelector('.front-cover');
     const bookPage = document.querySelector('.book-page');
     
-    // Set initial states - book is flat on desk with spine on the left
+    // Set initial states
     gsap.set(book, { 
-        rotationX: 0, // Flat on desk
-        rotationZ: 0, // No rotation, spine on left
+        rotationX: 0,
+        rotationZ: 0,
         transformPerspective: 1000,
-        opacity: 1, // Fully visible from the start
-        scale: 1 // Normal size
+        opacity: 1,
+        scale: 1
     });
     
-    // Make sure the cover is on top of the page at first
+    // Make sure the cover is closed at first
     gsap.set(frontCover, { 
-        transformOrigin: "left center", // Hinge at left side
+        transformOrigin: "left center",
         rotationY: 0,
         zIndex: 2
     });
     
-    // Make sure the page is flat on the desk
+    // Book page setup
     gsap.set(bookPage, { 
-        transformOrigin: "left center", // Hinge at left side
+        transformOrigin: "left center",
         zIndex: 1,
         rotationY: 0
     });
     
-    // Create the timeline for the animation sequence
+    // Create a timeline for each click animation
     const timeline = gsap.timeline({
-        onComplete: function() {
-            // After animation completes, show main content and remove intro
-            setTimeout(() => {
-                whiteboardContainer.classList.remove('hidden');
-                whiteboardContainer.classList.add('show-content');
-                document.body.style.overflow = 'auto'; // Re-enable scrolling
-                
-                // Add slight random rotation to text elements for hand-drawn feel
-                const textElements = document.querySelectorAll('h1, h2, h3, p, li');
-                textElements.forEach(element => {
-                    // Generate a small random rotation between -1 and 1 degrees
-                    const randomRotation = (Math.random() * 2 - 1).toFixed(1);
-                    element.style.transform = `rotate(${randomRotation}deg)`;
-                });
-                
-                // Remove intro container after transition completes
-                setTimeout(() => {
-                    introContainer.remove();
-                }, 500);
-            }, 500);
-        }
+        paused: true
     });
     
-    // Proper animation sequence - book is already visible on the desk
+    // Book open animation (used for click)
     timeline
-        // Small pause to establish the scene with book already visible
-        .to({}, { duration: 0.8 })
-        
-        // Open the front cover to the right
         .to(frontCover, { 
-            duration: 1.5, 
-            rotationY: -180, // Flip cover to the right
+            duration: 1, 
+            rotationY: -180, 
             ease: "power2.inOut"
-        })
-        
-        // Small pause to see the white page
-        .to({}, { duration: 0.8 })
-        
-        // Zoom into the white page
-        .to(book, { 
-            duration: 1.8, 
-            scale: 4, 
-            opacity: 0,
-            ease: "power3.in" 
         });
+    
+    // Interaction handling
+    let clickCount = 0;
+    
+    // Add click listener to the book
+    bookContainer.addEventListener('click', function() {
+        clickCount++;
         
-    // Play the animation immediately
-    timeline.play();
+        if (clickCount <= 4) {
+            // For first 4 clicks, just open the book
+            timeline.play(0); // Play from the beginning
+            
+            // After animation completes, close the book again
+            setTimeout(() => {
+                timeline.reverse();
+            }, 1500);
+        } else if (clickCount === 5) {
+            // On the 5th click, transition to the main site
+            timeline.play(0);
+            
+            // Create a zoom in effect
+            gsap.to(book, {
+                duration: 1.5,
+                scale: 4,
+                ease: "power3.in",
+                onComplete: function() {
+                    // Show main content and hide intro
+                    whiteboardContainer.classList.remove('hidden');
+                    whiteboardContainer.classList.add('show-content');
+                    document.body.style.overflow = 'auto'; // Re-enable scrolling
+                    
+                    // Add slight random rotation to text elements for hand-drawn feel
+                    const textElements = document.querySelectorAll('h1, h2, h3, p, li');
+                    textElements.forEach(element => {
+                        // Generate a small random rotation between -1 and 1 degrees
+                        const randomRotation = (Math.random() * 2 - 1).toFixed(1);
+                        element.style.transform = `rotate(${randomRotation}deg)`;
+                    });
+                    
+                    // Remove intro container
+                    setTimeout(() => {
+                        introContainer.remove();
+                    }, 500);
+                }
+            });
+        }
+    });
 });

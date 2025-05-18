@@ -102,6 +102,7 @@ body {
   height: 400px;
   position: relative;
   transform-style: preserve-3d;
+  cursor: pointer; /* Add pointer cursor to indicate clickability */
 }
 
 .book {
@@ -116,7 +117,7 @@ body {
   position: absolute;
   width: 180px; /* Smaller book */
   height: 240px; /* Smaller book */
-  left: 58%; /* Move to the right to center the spine */
+  left: 50%; /* Center the book */
   top: 50%;
   margin-left: -90px; /* Half the width */
   margin-top: -120px; /* Half the height */
@@ -144,7 +145,7 @@ body {
   background-image: 
     linear-gradient(to right, var(--book-lines) 1px, transparent 1px),
     linear-gradient(to bottom, var(--book-lines) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-size: 7.5px 7.5px;
   z-index: 1;
   border: 1px solid #ddd;
   border-left: none; /* No border at the spine */
