@@ -7,9 +7,28 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Adding GSAP for better animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 </head>
 <body>
-    <div class="whiteboard-container">
+    <!-- Intro Animation Container -->
+    <div class="intro-container">
+        <div class="desk">
+            <div class="book-container">
+                <div class="book">
+                    <div class="book-page">
+                        <!-- This is the page we'll zoom into -->
+                    </div>
+                    <div class="book-cover front-cover">
+                        <div class="book-title">Math Notebook</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content (your existing site) -->
+    <div class="whiteboard-container hidden">
         <div class="whiteboard-header">
             <div class="whiteboard-title">
                 <h1>Pahul's Whiteboard</h1>
@@ -65,32 +84,6 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- <div class="whiteboard-section skills-section">
-                <div class="green-section">
-                    <h2>Skills</h2>
-                </div>
-                <div class="skill-columns">
-                    <div class="skill-column">
-                        <h3>Languages</h3>
-                        <ul>
-                            <li>JavaScript</li>
-                            <li>Python</li>
-                            <li>Java</li>
-                            <li>HTML/CSS</li>
-                        </ul>
-                    </div>
-                    <div class="skill-column">
-                        <h3>Frameworks</h3>
-                        <ul>
-                            <li>React</li>
-                            <li>Node.js</li>
-                            <li>Express</li>
-                            <li>Django</li>
-                        </ul>
-                    </div>
-                </div>
-            </div> -->
             
             <div class="sticky-note">
                 <div class="sticky-header"></div>
