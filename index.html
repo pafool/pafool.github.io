@@ -3,88 +3,522 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pahul | Whiteboard</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Adding GSAP for better animations -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <title>Isometric Bedroom - 3D Portfolio</title>
+    
+    <style>
+        /* Reset default browser styles to give us full control */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow: hidden; /* Prevents scrollbars during 3D interaction */
+            color: white;
+        }
+        
+        /* Main container that holds our 3D scene */
+        #scene-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            cursor: grab; /* Shows grab cursor when hovering */
+        }
+        
+        /* Changes cursor when actively dragging the 3D scene */
+        #scene-container:active {
+            cursor: grabbing;
+        }
+        
+        /* Loading indicator that appears while the 3D model downloads */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Animated loading spinner */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #ffffff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* UI overlay with title and instructions */
+        #ui-overlay {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            z-index: 5;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+        
+        #ui-overlay h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        #ui-overlay p {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 5px;
+        }
+        
+        /* Controls panel for additional interaction options */
+        #controls-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 5;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+        
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        /* Error message styling */
+        #error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 15;
+            display: none;
+        }
+        
+        /* Responsive design for mobile devices */
+        @media (max-width: 768px) {
+            #ui-overlay {
+                top: 15px;
+                left: 15px;
+                right: 15px;
+                max-width: none;
+                padding: 15px;
+            }
+            
+            #ui-overlay h1 {
+                font-size: 20px;
+            }
+            
+            #controls-panel {
+                bottom: 15px;
+                right: 15px;
+                left: 15px;
+                text-align: center;
+            }
+            
+            .control-button {
+                display: inline-block;
+                margin: 2px;
+            }
+        }
+        
+        /* Fade-in animation for when content loads */
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 1s ease-in forwards;
+        }
+        
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Intro Animation Container -->
-    <div class="intro-container">
-        <div class="desk">
-            <div class="book-container">
-                <div class="book">
-                    <div class="book-page">
-                        <!-- This is the page we'll zoom into -->
-                    </div>
-                    <div class="book-cover front-cover">
-                        <div class="book-title">Math Notebook</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Main Content (your existing site) -->
-    <div class="whiteboard-container hidden">
-        <div class="whiteboard-header">
-            <div class="whiteboard-title">
-                <h1>Pahul's Whiteboard</h1>
-            </div>
+    <!-- Main container for our 3D scene -->
+    <div id="scene-container">
+        <!-- Loading indicator with spinner -->
+        <div id="loading">
+            <div class="spinner"></div>
+            <div id="loading-text">Loading 3D Model...</div>
+            <div id="loading-progress">0%</div>
         </div>
         
-        <div class="whiteboard-content">
-            <div class="whiteboard-section intro-section">
-                <div class="blue-section">
-                    <h2>Hello, I'm Pahul</h2>
-                    <h3>Software Developer & Problem Solver</h3>
-                </div>
-                <p>I create innovative solutions through code and collaboration.</p>
-            </div>
-            
-            <div class="whiteboard-section projects-section">
-                <div class="red-section">
-                    <h2>Ideas for this website</h2>
-                </div>
-                <div class="whiteboard-card">
-                    <h3>Idea One</h3>
-                    <p>An isometric view of a room that changes as you scroll</p>
-                    <div class="tag-container">
-                        <span class="tag">Could begin with childhood room and stuff zooms off and on the screen as the user scrolls</span>
-                        <span class="tag">Maths book exchanged for a laptop, then a PC, then room changes</span>
-                        <span class="tag">Or, could just be a simple room where different clickables give different information</span>
-                        <span class="tag">Awards on the wall show awards/degree, calendar shows resume timeline, computer shows projects</span>
-                        <span class="tag">If you press night mode, the sun arcs across the sky and the moon comes out to make everything darker</span>
-                        <span class="tag">Have a whiteboard that the user can draw on for fun</span>
-                    </div>
-                </div>
-
-                <div class="whiteboard-card">
-                    <h3>Idea Two</h3>
-                    <p>Sweep across the whiteboard to reach the next page instead of loading</p>
-                    <div class="tag-container">
-                        <span class="tag">Kind of like Prezi</span>
-                        <span class="tag">Careful of efficiency</span>
-                    </div>
-                </div>
-
-            </div>
-            
-            <div class="sticky-note">
-                <div class="sticky-header"></div>
-                <p><i class="fas fa-envelope"></i> Get in touch: pahulsohi@.com</p>
-                <p><i class="fab fa-github"></i> GitHub: github.com/pafool</p>
-                <p><i class="fab fa-github"></i> LinkedIn: www.linkedin.com/in/pahuls/</p>
-            </div>
+        <!-- Information overlay -->
+        <div id="ui-overlay" class="fade-in">
+            <h1>Isometric Bedroom Design</h1>
+            <p>🖱️ Drag to rotate</p>
+            <p>🔍 Scroll to zoom</p>
+            <p>📱 Touch and pinch on mobile</p>
         </div>
         
-        <div class="whiteboard-footer">
-            <p>&copy; 2025 Pahul Singh</p>
+        <!-- Control panel with interaction buttons -->
+        <div id="controls-panel" class="fade-in">
+            <button class="control-button" onclick="resetCamera()">Reset View</button>
+            <button class="control-button" onclick="toggleAutoRotate()">Auto Rotate</button>
+            <button class="control-button" onclick="toggleWireframe()">Wireframe</button>
+        </div>
+        
+        <!-- Error message container -->
+        <div id="error-message">
+            <h3>Error Loading 3D Model</h3>
+            <p>Please check that bedroom-model.glb is in the same folder as this HTML file.</p>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- 
+    Using the proven Stack Overflow solution for Three.js imports.
+    This approach uses a tested version (0.130.1) that's known to work reliably.
+    Sometimes using a slightly older, well-tested version is more reliable than the newest.
+    -->
+    <script type="module">
+        // Import Three.js using the exact pattern from the Stack Overflow solution
+        // This uses version 0.130.1 which has proven compatibility
+        // Added DRACOLoader to handle Blender's compressed exports
+        import * as THREE from 'https://cdn.skypack.dev/three@0.130.1/build/three.module.js';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.130.1/examples/jsm/controls/OrbitControls.js';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.130.1/examples/jsm/loaders/GLTFLoader.js';
+        import { DRACOLoader } from 'https://cdn.skypack.dev/three@0.130.1/examples/jsm/loaders/DRACOLoader.js';
+        
+        // Global variables to hold our 3D scene components
+        let scene, camera, renderer, controls;
+        let loadedModel = null;
+        let autoRotate = false;
+        let isWireframe = false;
+        
+        // Get references to HTML elements we'll need to update
+        const loadingElement = document.getElementById('loading');
+        const loadingText = document.getElementById('loading-text');
+        const loadingProgress = document.getElementById('loading-progress');
+        const errorMessage = document.getElementById('error-message');
+        
+        /**
+         * Initialize the entire 3D scene
+         * This function sets up the camera, renderer, lighting, and starts loading the model
+         */
+        function init() {
+            console.log('Initializing 3D scene...');
+            
+            // Create the Three.js scene - this is like the stage where everything happens
+            scene = new THREE.Scene();
+            
+            // Set a background color (dark blue-gray that complements the bedroom)
+            scene.background = new THREE.Color(0x2c3e50);
+            
+            // Create the camera with perspective projection
+            // Think of this as positioning your eye to look at the scene
+            camera = new THREE.PerspectiveCamera(
+                50,                                    // Field of view (how wide the view is)
+                window.innerWidth / window.innerHeight, // Aspect ratio (width/height)
+                0.1,                                   // Near clipping plane (closest visible distance)
+                1000                                   // Far clipping plane (farthest visible distance)
+            );
+            
+            // Position the camera for an isometric-style view
+            // These coordinates put the camera up and to the side, looking down at the scene
+            camera.position.set(12, 8, 12);
+            camera.lookAt(0, 0, 0); // Point the camera at the center of the scene
+            
+            // Create the WebGL renderer - this draws everything to the screen
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,    // Smooth out jagged edges
+                alpha: true,        // Allow transparent backgrounds
+                powerPreference: "high-performance" // Use dedicated graphics card if available
+            });
+            
+            // Configure renderer settings for best quality
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // High DPI support, but cap at 2x for performance
+            renderer.shadowMap.enabled = true; // Enable shadow rendering
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Use soft shadows for realism
+            renderer.toneMapping = THREE.ACESFilmicToneMapping; // Realistic color reproduction
+            renderer.toneMappingExposure = 1.2; // Slightly brighter than default
+            renderer.outputColorSpace = THREE.SRGBColorSpace; // Updated from outputEncoding for newer Three.js
+            
+            // Add the renderer's canvas element to the HTML page
+            document.getElementById('scene-container').appendChild(renderer.domElement);
+            
+            // Set up camera controls so users can interact with the scene
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;     // Smooth, inertial movement
+            controls.dampingFactor = 0.05;     // How much smoothing to apply
+            controls.enableZoom = true;        // Allow zooming with mouse wheel
+            controls.enablePan = true;         // Allow panning with right-click drag
+            controls.minDistance = 3;          // Closest zoom level
+            controls.maxDistance = 50;         // Farthest zoom level
+            controls.maxPolarAngle = Math.PI * 0.75; // Prevent camera from going too far below the scene
+            
+            // Set up lighting that complements bedroom scenes
+            setupLighting();
+            
+            // Start loading the 3D model
+            loadModel();
+        }
+        
+        /**
+         * Set up lighting that works well for interior scenes
+         * We use multiple light sources to create realistic, soft lighting
+         */
+        function setupLighting() {
+            console.log('Setting up lighting...');
+            
+            // Ambient light provides overall base illumination
+            // Think of this as light bouncing around the room from all directions
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+            
+            // Main directional light acts like sunlight coming through a window
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            
+            // Configure shadow quality - higher numbers = better quality but slower performance
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 50;
+            directionalLight.shadow.camera.left = -10;
+            directionalLight.shadow.camera.right = 10;
+            directionalLight.shadow.camera.top = 10;
+            directionalLight.shadow.camera.bottom = -10;
+            
+            scene.add(directionalLight);
+            
+            // Fill light to soften harsh shadows
+            // This simulates light bouncing off walls and ceiling
+            const fillLight = new THREE.DirectionalLight(0x87CEEB, 0.3);
+            fillLight.position.set(-5, 3, -5);
+            scene.add(fillLight);
+            
+            // Rim light for better object definition
+            const rimLight = new THREE.DirectionalLight(0xffffff, 0.2);
+            rimLight.position.set(0, 5, -10);
+            scene.add(rimLight);
+        }
+        
+        /**
+         * Load the 3D model exported from Blender
+         * This is where your bedroom-model.glb file gets loaded and displayed
+         * Now includes DRACO support for Blender's compressed exports
+         */
+        function loadModel() {
+            console.log('Loading bedroom model...');
+            
+            // Create a GLTF loader specifically for Blender exports
+            const loader = new GLTFLoader();
+            
+            // Set up DRACO loader for compressed geometry (common in Blender exports)
+            const dracoLoader = new DRACOLoader();
+            // Use Google's hosted DRACO decoder (reliable and fast CDN)
+            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+            loader.setDRACOLoader(dracoLoader);
+            
+            console.log('DRACO compression support enabled');
+            
+            // Load the model file
+            loader.load(
+                'bedroom-model.glb', // The file you exported from Blender
+                
+                // Success callback - runs when the model loads successfully
+                function (gltf) {
+                    console.log('Model loaded successfully!');
+                    
+                    // Get the actual 3D model from the loaded file
+                    loadedModel = gltf.scene;
+                    
+                    // Configure shadows and materials for each object in the model
+                    loadedModel.traverse(function (child) {
+                        if (child.isMesh) {
+                            // Enable shadows for this object
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            
+                            // Enhance material properties for better web display
+                            if (child.material) {
+                                child.material.envMapIntensity = 0.8;
+                                // Ensure materials are double-sided if needed
+                                child.material.side = THREE.DoubleSide;
+                            }
+                        }
+                    });
+                    
+                    // Add the model to the scene
+                    scene.add(loadedModel);
+                    
+                    // Hide the loading indicator
+                    hideLoading();
+                    
+                    console.log('Model added to scene');
+                    console.log('Model info:', {
+                        triangles: loadedModel.children.length,
+                        hasDraco: true, // Since we needed DRACO support
+                        boundingBox: new THREE.Box3().setFromObject(loadedModel)
+                    });
+                },
+                
+                // Progress callback - runs during loading to show progress
+                function (progress) {
+                    if (progress.lengthComputable) {
+                        const percentComplete = (progress.loaded / progress.total * 100);
+                        loadingProgress.textContent = Math.round(percentComplete) + '%';
+                        console.log('Loading progress:', Math.round(percentComplete) + '%');
+                    }
+                },
+                
+                // Error callback - runs if something goes wrong
+                function (error) {
+                    console.error('Error loading model:', error);
+                    showError();
+                }
+            );
+        }
+        
+        /**
+         * Hide the loading indicator and show the UI controls
+         */
+        function hideLoading() {
+            loadingElement.style.display = 'none';
+            
+            // Fade in the UI elements
+            setTimeout(() => {
+                document.getElementById('ui-overlay').style.opacity = '1';
+                document.getElementById('controls-panel').style.opacity = '1';
+            }, 100);
+        }
+        
+        /**
+         * Show an error message if the model fails to load
+         */
+        function showError() {
+            loadingElement.style.display = 'none';
+            errorMessage.style.display = 'block';
+        }
+        
+        /**
+         * Animation loop - this function runs continuously to update the display
+         * Think of this as redrawing the scene 60 times per second
+         */
+        function animate() {
+            requestAnimationFrame(animate); // Schedule the next frame
+            
+            // Update camera controls (handles the smooth damping)
+            controls.update();
+            
+            // If auto-rotate is enabled, slowly spin the model
+            if (autoRotate && loadedModel) {
+                loadedModel.rotation.y += 0.005;
+            }
+            
+            // Render the scene to the screen
+            renderer.render(scene, camera);
+        }
+        
+        /**
+         * Handle window resizing to maintain proper aspect ratio
+         */
+        function onWindowResize() {
+            // Update camera aspect ratio
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            
+            // Update renderer size
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        /**
+         * Reset the camera to its original position
+         */
+        function resetCamera() {
+            controls.reset();
+            camera.position.set(12, 8, 12);
+            camera.lookAt(0, 0, 0);
+        }
+        
+        /**
+         * Toggle automatic rotation of the model
+         */
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+            console.log('Auto rotate:', autoRotate ? 'enabled' : 'disabled');
+        }
+        
+        /**
+         * Toggle wireframe mode to see the model's geometry structure
+         */
+        function toggleWireframe() {
+            if (!loadedModel) return;
+            
+            isWireframe = !isWireframe;
+            
+            loadedModel.traverse(function (child) {
+                if (child.isMesh && child.material) {
+                    child.material.wireframe = isWireframe;
+                }
+            });
+            
+            console.log('Wireframe mode:', isWireframe ? 'enabled' : 'disabled');
+        }
+        
+        // Make functions available globally so the HTML buttons can call them
+        // This is necessary because we're using ES6 modules which have their own scope
+        window.resetCamera = resetCamera;
+        window.toggleAutoRotate = toggleAutoRotate;
+        window.toggleWireframe = toggleWireframe;
+        
+        // Set up event listeners
+        window.addEventListener('resize', onWindowResize, false);
+        
+        // Handle mobile device orientation changes
+        window.addEventListener('orientationchange', function() {
+            setTimeout(onWindowResize, 100);
+        });
+        
+        // Start the application
+        console.log('Starting 3D bedroom viewer...');
+        init();
+        animate();
+        
+        // Debug information
+        console.log('Three.js version:', THREE.REVISION);
+        console.log('WebGL supported:', !!window.WebGLRenderingContext);
+    </script>
 </body>
 </html>
