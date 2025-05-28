@@ -302,26 +302,48 @@
             
             // Ambient light provides overall base illumination
             // Think of this as light bouncing around the room from all directions
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            const ambientLight = new THREE.AmbientLight(0x404040, 3);
             scene.add(ambientLight);
             
             // Main directional light acts like sunlight coming through a window
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-            directionalLight.position.set(10, 10, 5);
-            directionalLight.castShadow = true;
-            
-            // Configure shadow quality - higher numbers = better quality but slower performance
-            directionalLight.shadow.mapSize.width = 2048;
-            directionalLight.shadow.mapSize.height = 2048;
-            directionalLight.shadow.camera.near = 0.5;
-            directionalLight.shadow.camera.far = 50;
-            directionalLight.shadow.camera.left = -10;
-            directionalLight.shadow.camera.right = 10;
-            directionalLight.shadow.camera.top = 10;
-            directionalLight.shadow.camera.bottom = -10;
-            
-            scene.add(directionalLight);
-            
+            const windowLightA = new THREE.PointLight(0xffffff, 1, 0, 2);
+            windowLightA.position.set(-1.92, 0.1, -0.5);
+            windowLightA.castShadow = true;
+            scene.add(windowLightA);
+
+            windowLightA.shadow.mapSize.width = 512; // default
+            windowLightA.shadow.mapSize.height = 512; // default
+            windowLightA.shadow.bias = -0.00005
+            windowLightA.shadow.camera.near = 0.5; // default
+            windowLightA.shadow.camera.far = 500; // default
+
+            const windowLightB = new THREE.PointLight(0xffffff, 1, 0, 2);
+            windowLightB.position.set(-1.92, 0.1, 0.5);
+            windowLightB.castShadow = true;
+            scene.add(windowLightB);
+
+            windowLightB.shadow.mapSize.width = 512; // default
+            windowLightB.shadow.mapSize.height = 512; // default
+            windowLightB.shadow.bias = -0.00005
+            windowLightB.shadow.camera.near = 0.5; // default
+            windowLightB.shadow.camera.far = 500; // default
+
+            const windowLightC = new THREE.PointLight(0xffffff, 1, 0, 2);
+            windowLightC.position.set(-1.92, 0.1, 0.1);
+            windowLightC.castShadow = true;
+            scene.add(windowLightC);
+
+            windowLightC.shadow.mapSize.width = 512; // default
+            windowLightC.shadow.mapSize.height = 512; // default
+            windowLightC.shadow.bias = -0.00005
+            windowLightC.shadow.camera.near = 0.5; // default
+            windowLightC.shadow.camera.far = 500; // default
+
+            const rectLight = new THREE.RectAreaLight(0xffffff, 50, 2, 1);
+            rectLight.position.set(-2.2, 0.1, 0.1);
+            rectLight.rotation.y = -Math.PI / 2;
+            scene.add(rectLight);
+
             // Fill light to soften harsh shadows
             // This simulates light bouncing off walls and ceiling
             const fillLight = new THREE.DirectionalLight(0x87CEEB, 0.3);
@@ -355,7 +377,7 @@
             
             // Load the model file
             loader.load(
-                'bedroom-model-dark.glb', // The file you exported from Blender
+                'maxpolyroom.glb', // The file you exported from Blender
                 
                 // Success callback - runs when the model loads successfully
                 function (gltf) {
