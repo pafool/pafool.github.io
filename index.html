@@ -254,7 +254,7 @@
             
             // Position the camera for an isometric-style view
             // These coordinates put the camera up and to the side, looking down at the scene
-            camera.position.set(12, 8, 12);
+            camera.position.set(7, 3, 7);
             camera.lookAt(0, 0, 0); // Point the camera at the center of the scene
             
             // Create the WebGL renderer - this draws everything to the screen
@@ -306,7 +306,7 @@
             scene.add(ambientLight);
             
             // Main directional light acts like sunlight coming through a window
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
             directionalLight.position.set(10, 10, 5);
             directionalLight.castShadow = true;
             
@@ -355,7 +355,7 @@
             
             // Load the model file
             loader.load(
-                'bedroom-model.glb', // The file you exported from Blender
+                'bedroom-model-dark.glb', // The file you exported from Blender
                 
                 // Success callback - runs when the model loads successfully
                 function (gltf) {
