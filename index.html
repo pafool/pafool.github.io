@@ -33,6 +33,11 @@
             cursor: grabbing;
         }
         
+        /* Special cursor for clickable objects */
+        #scene-container.clickable-cursor {
+            cursor: pointer !important;
+        }
+        
         /* Loading indicator that appears while the 3D model downloads */
         #loading {
             position: absolute;
@@ -132,6 +137,21 @@
             display: none;
         }
         
+        /* Tooltip for clickable objects */
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        
         /* Responsive design for mobile devices */
         @media (max-width: 768px) {
             #ui-overlay {
@@ -188,6 +208,7 @@
             <p>🖱️ Drag to rotate</p>
             <p>🔍 Scroll to zoom</p>
             <p>📱 Touch and pinch on mobile</p>
+            <p>🏸 Click badminton racquets to interact!</p>
         </div>
         
         <!-- Control panel with interaction buttons -->
@@ -195,7 +216,11 @@
             <button class="control-button" onclick="resetCamera()">Reset View</button>
             <button class="control-button" onclick="toggleAutoRotate()">Auto Rotate</button>
             <button class="control-button" onclick="toggleWireframe()">Wireframe</button>
+            <button class="control-button" onclick="highlightClickables()">Show Clickables</button>
         </div>
+        
+        <!-- Tooltip for object information -->
+        <div id="tooltip"></div>
         
         <!-- Error message container -->
         <div id="error-message">
@@ -224,11 +249,21 @@
         let autoRotate = false;
         let isWireframe = false;
         
+        // Raycasting and interaction variables
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let clickableObjects = []; // Array to store clickable objects
+        let hoveredObject = null;  // Currently hovered object
+        let highlightMaterial = null; // Material for highlighting
+        let originalMaterials = new Map(); // Store original materials
+        
         // Get references to HTML elements we'll need to update
         const loadingElement = document.getElementById('loading');
         const loadingText = document.getElementById('loading-text');
         const loadingProgress = document.getElementById('loading-progress');
         const errorMessage = document.getElementById('error-message');
+        const tooltip = document.getElementById('tooltip');
+        const sceneContainer = document.getElementById('scene-container');
         
         /**
          * Initialize the entire 3D scene
@@ -274,7 +309,7 @@
             renderer.outputColorSpace = THREE.SRGBColorSpace; // Updated from outputEncoding for newer Three.js
             
             // Add the renderer's canvas element to the HTML page
-            document.getElementById('scene-container').appendChild(renderer.domElement);
+            sceneContainer.appendChild(renderer.domElement);
             
             // Set up camera controls so users can interact with the scene
             controls = new OrbitControls(camera, renderer.domElement);
@@ -286,11 +321,197 @@
             controls.maxDistance = 50;         // Farthest zoom level
             controls.maxPolarAngle = Math.PI * 0.75; // Prevent camera from going too far below the scene
             
+            // Create highlight material for clickable objects
+            highlightMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00ff00,
+                emissive: 0x004400,
+                transparent: true,
+                opacity: 0.8
+            });
+            
             // Set up lighting that complements bedroom scenes
             setupLighting();
             
+            // Set up mouse interaction
+            setupInteraction();
+            
             // Start loading the 3D model
             loadModel();
+        }
+        
+        /**
+         * Set up mouse and touch interaction for raycasting
+         */
+        function setupInteraction() {
+            // Mouse move event for hover effects
+            sceneContainer.addEventListener('mousemove', onMouseMove, false);
+            
+            // Mouse click event for interactions
+            sceneContainer.addEventListener('click', onMouseClick, false);
+            
+            // Touch events for mobile devices
+            sceneContainer.addEventListener('touchstart', onTouchStart, false);
+            sceneContainer.addEventListener('touchend', onTouchEnd, false);
+        }
+        
+        /**
+         * Handle mouse movement for hover effects
+         */
+        function onMouseMove(event) {
+            event.preventDefault();
+            
+            // Calculate mouse position in normalized device coordinates (-1 to +1)
+            const rect = sceneContainer.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            // Update raycaster
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Check for intersections with clickable objects
+            const intersects = raycaster.intersectObjects(clickableObjects, true);
+            
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                
+                // If we're hovering over a new object
+                if (hoveredObject !== intersectedObject) {
+                    // Remove highlight from previous object
+                    if (hoveredObject) {
+                        restoreOriginalMaterial(hoveredObject);
+                    }
+                    
+                    // Highlight new object
+                    hoveredObject = intersectedObject;
+                    highlightObject(hoveredObject);
+                    
+                    // Change cursor and show tooltip
+                    sceneContainer.classList.add('clickable-cursor');
+                    showTooltip(event, getObjectName(hoveredObject));
+                }
+                
+                // Update tooltip position
+                updateTooltip(event);
+            } else {
+                // No intersection, remove any highlighting
+                if (hoveredObject) {
+                    restoreOriginalMaterial(hoveredObject);
+                    hoveredObject = null;
+                    sceneContainer.classList.remove('clickable-cursor');
+                    hideTooltip();
+                }
+            }
+        }
+        
+        /**
+         * Handle mouse clicks on 3D objects
+         */
+        function onMouseClick(event) {
+            event.preventDefault();
+            
+            // Calculate mouse position
+            const rect = sceneContainer.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            // Update raycaster
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Check for intersections
+            const intersects = raycaster.intersectObjects(clickableObjects, true);
+            
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object;
+                handleObjectClick(clickedObject);
+            }
+        }
+        
+        /**
+         * Handle touch events for mobile devices
+         */
+        function onTouchStart(event) {
+            if (event.touches.length === 1) {
+                // Store touch position for click detection
+                const touch = event.touches[0];
+                const rect = sceneContainer.getBoundingClientRect();
+                mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+            }
+        }
+        
+        function onTouchEnd(event) {
+            if (event.changedTouches.length === 1) {
+                // Check if this was a tap on a clickable object
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(clickableObjects, true);
+                
+                if (intersects.length > 0) {
+                    const clickedObject = intersects[0].object;
+                    handleObjectClick(clickedObject);
+                }
+            }
+        }
+        
+        /**
+         * Handle what happens when a clickable object is clicked
+         */
+        function handleObjectClick(object) {
+            const objectName = getObjectName(object);
+            console.log('Clicked on:', objectName);
+        }
+        
+        /**
+         * Get a human-readable name for an object
+         */
+        function getObjectName(object) {
+            // Try to get the name from the object or its parent
+            if (object.name) return object.name;
+            if (object.parent && object.parent.name) return object.parent.name;
+            return 'Interactive Object';
+        }
+        
+        /**
+         * Highlight an object by changing its material
+         */
+        function highlightObject(object) {
+            if (!originalMaterials.has(object)) {
+                originalMaterials.set(object, object.material);
+            }
+            object.material = highlightMaterial.clone();
+        }
+        
+        /**
+         * Restore an object's original material
+         */
+        function restoreOriginalMaterial(object) {
+            if (originalMaterials.has(object)) {
+                object.material = originalMaterials.get(object);
+            }
+        }
+        
+        /**
+         * Show tooltip with object information
+         */
+        function showTooltip(event, text) {
+            tooltip.textContent = `Click to interact: ${text}`;
+            tooltip.style.opacity = '1';
+            updateTooltip(event);
+        }
+        
+        /**
+         * Update tooltip position
+         */
+        function updateTooltip(event) {
+            const rect = sceneContainer.getBoundingClientRect();
+            tooltip.style.left = (event.clientX - rect.left + 10) + 'px';
+            tooltip.style.top = (event.clientY - rect.top - 30) + 'px';
+        }
+        
+        /**
+         * Hide tooltip
+         */
+        function hideTooltip() {
+            tooltip.style.opacity = '0';
         }
         
         /**
@@ -383,37 +604,77 @@
                 function (gltf) {
                     console.log('Model loaded successfully!');
                     
-                    // Get the actual 3D model from the loaded file
-                    loadedModel = gltf.scene;
-                    
-                    // Configure shadows and materials for each object in the model
-                    loadedModel.traverse(function (child) {
-                        if (child.isMesh) {
-                            // Enable shadows for this object
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                            
-                            // Enhance material properties for better web display
-                            if (child.material) {
-                                child.material.envMapIntensity = 0.8;
-                                // Ensure materials are double-sided if needed
-                                child.material.side = THREE.DoubleSide;
+                    try {
+                        // Get the actual 3D model from the loaded file
+                        loadedModel = gltf.scene;
+                        console.log('Model scene extracted');
+                        
+                        // Configure shadows and materials for each object in the model
+                        // Also identify clickable objects (badminton racquets)
+                        loadedModel.traverse(function (child) {
+                            try {
+                                if (child.isMesh) {
+                                    // Enable shadows for this object
+                                    child.castShadow = true;
+                                    child.receiveShadow = true;
+                                    
+                                    // Enhance material properties for better web display
+                                    if (child.material) {
+                                        child.material.envMapIntensity = 0.8;
+                                        // Ensure materials are double-sided if needed
+                                        child.material.side = THREE.DoubleSide;
+                                    }
+                                    
+                                    // Check if this object should be clickable
+                                    // Look for objects with names containing 'racquet' or 'badminton'
+                                    if (child.name) {
+                                        const objectName = child.name.toLowerCase();
+                                        if (objectName.includes('racquet') || 
+                                            objectName.includes('badminton') || 
+                                            objectName.includes('racket')) {
+                                            clickableObjects.push(child);
+                                            console.log('Found clickable object:', child.name);
+                                        }
+                                    }
+                                }
+                            } catch (traverseError) {
+                                console.error('Error processing child object:', traverseError);
+                                console.log('Problematic child:', child);
                             }
+                        });
+                        
+                        console.log('Traverse completed');
+                        
+                        // Add the model to the scene
+                        scene.add(loadedModel);
+                        console.log('Model added to scene');
+                        
+                        // Log information about clickable objects found
+                        console.log(`Found ${clickableObjects.length} clickable objects`);
+                        if (clickableObjects.length === 0) {
+                            console.warn('No badminton racquets found. Object names in your model might be different.');
+                            console.log('All mesh names in the model:');
+                            loadedModel.traverse(function (child) {
+                                if (child.isMesh && child.name) {
+                                    console.log('- ' + child.name);
+                                }
+                            });
                         }
-                    });
-                    
-                    // Add the model to the scene
-                    scene.add(loadedModel);
-                    
-                    // Hide the loading indicator
-                    hideLoading();
-                    
-                    console.log('Model added to scene');
-                    console.log('Model info:', {
-                        triangles: loadedModel.children.length,
-                        hasDraco: true, // Since we needed DRACO support
-                        boundingBox: new THREE.Box3().setFromObject(loadedModel)
-                    });
+                        
+                        // Hide the loading indicator
+                        hideLoading();
+                        
+                        console.log('Model info:', {
+                            triangles: loadedModel.children.length,
+                            hasDraco: true, // Since we needed DRACO support
+                            boundingBox: new THREE.Box3().setFromObject(loadedModel),
+                            clickableObjects: clickableObjects.length
+                        });
+                        
+                    } catch (mainError) {
+                        console.error('Error in model loading callback:', mainError);
+                        showError();
+                    }
                 },
                 
                 // Progress callback - runs during loading to show progress
@@ -519,11 +780,36 @@
             console.log('Wireframe mode:', isWireframe ? 'enabled' : 'disabled');
         }
         
+        /**
+         * Highlight all clickable objects temporarily
+         */
+        function highlightClickables() {
+            if (clickableObjects.length === 0) {
+                alert('No clickable objects found in the model. Make sure your badminton racquets are named appropriately in Blender.');
+                return;
+            }
+            
+            console.log('Highlighting clickable objects...');
+            
+            // Highlight all clickable objects
+            clickableObjects.forEach(obj => {
+                highlightObject(obj);
+            });
+            
+            // Remove highlighting after 3 seconds
+            setTimeout(() => {
+                clickableObjects.forEach(obj => {
+                    restoreOriginalMaterial(obj);
+                });
+            }, 3000);
+        }
+        
         // Make functions available globally so the HTML buttons can call them
         // This is necessary because we're using ES6 modules which have their own scope
         window.resetCamera = resetCamera;
         window.toggleAutoRotate = toggleAutoRotate;
         window.toggleWireframe = toggleWireframe;
+        window.highlightClickables = highlightClickables;
         
         // Set up event listeners
         window.addEventListener('resize', onWindowResize, false);
