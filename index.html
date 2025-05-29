@@ -569,7 +569,7 @@
                 highlightedObjects.push(obj);
             });
             
-            // console.log(`Highlighting ${objectsToHighlight.length} objects for "${clickedObject.name}"`);
+            console.log(`Highlighting ${objectsToHighlight.length} objects for "${clickedObject.name}"`);
         }
         
         function handleObjectClick(clickedObject) {
@@ -594,7 +594,7 @@
         
         async function handlePianoKeyClick(key) {
             const keyName = key.name;
-            // console.log('Piano key clicked:', keyName);
+            console.log('Piano key clicked:', keyName);
             
             await initializeAudioContext();
             
@@ -606,7 +606,7 @@
             const note = parseKeyName(keyName);
             if (note && PIANO_NOTES.includes(note)) {
                 // Play the note with dynamic velocity
-                const velocity = 1; // Random velocity for natural sound
+                const velocity = 0.7 + Math.random() * 0.3; // Random velocity for natural sound
                 pianoSampler.triggerAttackRelease(note, '0.5', undefined, velocity);
                 console.log(`Playing note: ${note} (velocity: ${velocity.toFixed(2)})`);
                 
@@ -636,7 +636,7 @@
         
         function parseKeyName(keyName) {
             const name = keyName.toLowerCase();
-            // console.log('Parsing key name:', name);
+            console.log('Parsing key name:', name);
             
             // Try all patterns
             for (const [pattern, noteFunction] of Object.entries(KEY_NAME_PATTERNS)) {
@@ -644,24 +644,39 @@
                     // Extract octave number
                     const octaveMatch = name.match(/(\d+)/);
                     if (octaveMatch) {
-                        const octave = octaveMatch[1];
-                        const note = noteFunction(octave);
+                        let octave = parseInt(octaveMatch[1]);
+                        
+                        // Adjust octave for A and B keys (they should be 1 octave lower)
+                        // This is because piano octaves change at C, not A
+                        if (pattern.includes('piano_a') || pattern.includes('piano_b')) {
+                            octave = octave - 1;
+                            console.log(`Adjusting octave for A/B key: ${octave + 1} -> ${octave}`);
+                        }
+                        
+                        const note = noteFunction(octave.toString());
                         
                         // Validate note exists in our range
                         if (PIANO_NOTES.includes(note)) {
-                            // console.log(`Parsed "${keyName}" -> "${note}"`);
+                            console.log(`Parsed "${keyName}" -> "${note}"`);
                             return note;
                         }
                     }
                 }
             }
             
-            // Fallback: try direct pattern matching
+            // Fallback: try direct pattern matching with octave adjustment
             const directMatch = name.match(/piano_([a-g])(#|sharp)?(\d+)/);
             if (directMatch) {
                 const noteName = directMatch[1].toUpperCase();
                 const isSharp = directMatch[2] !== undefined;
-                const octave = directMatch[3];
+                let octave = parseInt(directMatch[3]);
+                
+                // Adjust octave for A and B keys
+                if (noteName === 'A' || noteName === 'B') {
+                    octave = octave - 1;
+                    console.log(`Adjusting octave for ${noteName} key: ${parseInt(directMatch[3])} -> ${octave}`);
+                }
+                
                 const fullNote = isSharp ? `${noteName}#${octave}` : `${noteName}${octave}`;
                 
                 if (PIANO_NOTES.includes(fullNote)) {
@@ -786,6 +801,20 @@
         }
         
         function handlePianoClick() {
+            console.log('Piano clicked - showing music projects...');
+            showModal('Piano', `
+                <h3>🎹 Music & Creativity</h3>
+                <p>Music is my creative outlet and source of inspiration!</p>
+                <ul>
+                    <li>Self-taught pianist (5+ years)</li>
+                    <li>Compose original pieces</li>
+                    <li>Record and produce music</li>
+                    <li>Perform at local events</li>
+                </ul>
+                <p>Music enhances my creativity and problem-solving skills in programming.</p>
+                <p><strong>🎹 All 88 piano keys are now functional with real note sounds!</strong></p>
+                <button onclick="playPianoDemo()">🎵 Play Demo Scale</button>
+            `);
         }
         
         // Piano demo function
