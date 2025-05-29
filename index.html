@@ -646,11 +646,11 @@
                     if (octaveMatch) {
                         let octave = parseInt(octaveMatch[1]);
                         
-                        // Adjust octave for A and B keys (they should be 1 octave lower)
+                        // Adjust octave for A, A#, and B keys (they should be 1 octave lower)
                         // This is because piano octaves change at C, not A
                         if (pattern.includes('piano_a') || pattern.includes('piano_b')) {
                             octave = octave - 1;
-                            console.log(`Adjusting octave for A/B key: ${octave + 1} -> ${octave}`);
+                            console.log(`Adjusting octave for A/A#/B key: ${octave + 1} -> ${octave}`);
                         }
                         
                         const note = noteFunction(octave.toString());
@@ -671,10 +671,10 @@
                 const isSharp = directMatch[2] !== undefined;
                 let octave = parseInt(directMatch[3]);
                 
-                // Adjust octave for A and B keys
+                // Adjust octave for A, A#, and B keys
                 if (noteName === 'A' || noteName === 'B') {
                     octave = octave - 1;
-                    console.log(`Adjusting octave for ${noteName} key: ${parseInt(directMatch[3])} -> ${octave}`);
+                    console.log(`Adjusting octave for ${noteName}${isSharp ? '#' : ''} key: ${parseInt(directMatch[3])} -> ${octave}`);
                 }
                 
                 const fullNote = isSharp ? `${noteName}#${octave}` : `${noteName}${octave}`;
