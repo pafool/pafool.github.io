@@ -197,6 +197,7 @@
             <p>💻 Hold Shift and Pan to move around</p>
             <p>📱 Touch and pinch on mobile</p>
             <p>👆 Click objects to interact!</p>
+            <p style="color: #ffeb3b;">🎹 Click piano keys for real piano sounds!</p>
         </div>
         
         <div id="controls-panel" class="fade-in">
@@ -214,15 +215,8 @@
     </div>
 
     <script type="module">
-        import { 
-            handleLaptopClick, 
-            handleBadmintonClick, 
-            handleCalendarClick, 
-            handleCertificateClick, 
-            handlePianoClick 
-        } from './interaction-handlers.js';
-        
         import * as THREE from 'https://cdn.skypack.dev/three@0.130.1/build/three.module.js';
+        import * as Tone from 'https://cdn.skypack.dev/tone@14.8.49';
         import { OrbitControls } from 'https://cdn.skypack.dev/three@0.130.1/examples/jsm/controls/OrbitControls.js';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.130.1/examples/jsm/loaders/GLTFLoader.js';
         import { DRACOLoader } from 'https://cdn.skypack.dev/three@0.130.1/examples/jsm/loaders/DRACOLoader.js';
@@ -231,12 +225,16 @@
         let loadedModel = null;
         let isWireframe = false;
         
+        // Audio setup
+        let pianoSampler = null;
+        let audioInitialized = false;
+        
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
-        let interactionZones = new Map(); // Maps hitbox objects to their associated objects
-        let hitboxObjects = []; // Array of hitbox objects for raycasting
-        let hoveredZone = null;
-        let highlightedObjects = []; // Currently highlighted objects
+        let allObjects = []; // Simple array of all objects in the scene
+        let interactableObjects = []; // Objects that can be clicked
+        let hoveredObject = null;
+        let highlightedObjects = [];
         let highlightMaterial = null;
         let originalMaterials = new Map();
         
@@ -246,6 +244,45 @@
         const errorMessage = document.getElementById('error-message');
         const tooltip = document.getElementById('tooltip');
         const sceneContainer = document.getElementById('scene-container');
+        
+        // Complete 88-key piano note mapping (A0 to C8)
+        const PIANO_NOTES = [
+            'A0', 'A#0', 'B0',
+            'C1', 'C#1', 'D1', 'D#1', 'E1', 'F1', 'F#1', 'G1', 'G#1', 'A1', 'A#1', 'B1',
+            'C2', 'C#2', 'D2', 'D#2', 'E2', 'F2', 'F#2', 'G2', 'G#2', 'A2', 'A#2', 'B2',
+            'C3', 'C#3', 'D3', 'D#3', 'E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3',
+            'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4', 'A#4', 'B4',
+            'C5', 'C#5', 'D5', 'D#5', 'E5', 'F5', 'F#5', 'G5', 'G#5', 'A5', 'A#5', 'B5',
+            'C6', 'C#6', 'D6', 'D#6', 'E6', 'F6', 'F#6', 'G6', 'G#6', 'A6', 'A#6', 'B6',
+            'C7', 'C#7', 'D7', 'D#7', 'E7', 'F7', 'F#7', 'G7', 'G#7', 'A7', 'A#7', 'B7',
+            'C8'
+        ];
+        
+        // Key name patterns to match with your Blender model
+        const KEY_NAME_PATTERNS = {
+            // White keys
+            'piano_a': (octave) => `A${octave}`,
+            'piano_b': (octave) => `B${octave}`,
+            'piano_c': (octave) => `C${octave}`,
+            'piano_d': (octave) => `D${octave}`,
+            'piano_e': (octave) => `E${octave}`,
+            'piano_f': (octave) => `F${octave}`,
+            'piano_g': (octave) => `G${octave}`,
+            
+            // Sharp keys (black keys)
+            'piano_sharp_a': (octave) => `A#${octave}`,
+            'piano_sharp_c': (octave) => `C#${octave}`,
+            'piano_sharp_d': (octave) => `D#${octave}`,
+            'piano_sharp_f': (octave) => `F#${octave}`,
+            'piano_sharp_g': (octave) => `G#${octave}`,
+            
+            // Alternative naming patterns
+            'piano_as': (octave) => `A#${octave}`,
+            'piano_cs': (octave) => `C#${octave}`,
+            'piano_ds': (octave) => `D#${octave}`,
+            'piano_fs': (octave) => `F#${octave}`,
+            'piano_gs': (octave) => `G#${octave}`,
+        };
         
         function init() {
             scene = new THREE.Scene();
@@ -295,6 +332,7 @@
             
             setupLighting();
             setupInteraction();
+            setupAudio();
             loadModel();
         }
         
@@ -305,6 +343,121 @@
             sceneContainer.addEventListener('touchend', onTouchEnd, false);
         }
         
+        async function setupAudio() {
+            try {
+                // Create a high-quality piano sampler
+                pianoSampler = new Tone.Sampler({
+                    urls: {
+                        A0: "A0.mp3",
+                        C1: "C1.mp3",
+                        "D#1": "Ds1.mp3",
+                        "F#1": "Fs1.mp3",
+                        A1: "A1.mp3",
+                        C2: "C2.mp3",
+                        "D#2": "Ds2.mp3",
+                        "F#2": "Fs2.mp3",
+                        A2: "A2.mp3",
+                        C3: "C3.mp3",
+                        "D#3": "Ds3.mp3",
+                        "F#3": "Fs3.mp3",
+                        A3: "A3.mp3",
+                        C4: "C4.mp3",
+                        "D#4": "Ds4.mp3",
+                        "F#4": "Fs4.mp3",
+                        A4: "A4.mp3",
+                        C5: "C5.mp3",
+                        "D#5": "Ds5.mp3",
+                        "F#5": "Fs5.mp3",
+                        A5: "A5.mp3",
+                        C6: "C6.mp3",
+                        "D#6": "Ds6.mp3",
+                        "F#6": "Fs6.mp3",
+                        A6: "A6.mp3",
+                        C7: "C7.mp3",
+                        "D#7": "Ds7.mp3",
+                        "F#7": "Fs7.mp3",
+                        A7: "A7.mp3",
+                        C8: "C8.mp3"
+                    },
+                    baseUrl: "https://tonejs.github.io/audio/salamander/",
+                    onload: () => {
+                        console.log('Piano samples loaded successfully');
+                    },
+                    onerror: (error) => {
+                        console.error('Error loading piano samples:', error);
+                        setupFallbackSynth();
+                    }
+                }).toDestination();
+                
+                // Add subtle reverb and compression for realistic sound
+                const reverb = new Tone.Reverb({
+                    decay: 1.5,
+                    preDelay: 0.01,
+                    wet: 0.15
+                }).toDestination();
+                
+                const compressor = new Tone.Compressor({
+                    threshold: -12,
+                    ratio: 3,
+                    attack: 0.003,
+                    release: 0.01
+                }).toDestination();
+                
+                pianoSampler.connect(reverb);
+                pianoSampler.connect(compressor);
+                
+                console.log('Piano sampler initialized with', PIANO_NOTES.length, 'notes');
+            } catch (error) {
+                console.error('Error setting up audio:', error);
+                setupFallbackSynth();
+            }
+        }
+        
+        function setupFallbackSynth() {
+            console.log('Setting up fallback synthesizer...');
+            try {
+                pianoSampler = new Tone.PolySynth({
+                    voice: Tone.Synth,
+                    options: {
+                        oscillator: {
+                            type: "fmtriangle",
+                            harmonicity: 0.5,
+                            modulationIndex: 2
+                        },
+                        envelope: {
+                            attack: 0.01,
+                            decay: 0.2,
+                            sustain: 0.1,
+                            release: 1.5
+                        },
+                        filterEnvelope: {
+                            attack: 0.01,
+                            decay: 0.1,
+                            sustain: 0.5,
+                            release: 0.5,
+                            baseFrequency: 200,
+                            octaves: 2
+                        }
+                    }
+                }).toDestination();
+                console.log('Fallback synth ready');
+            } catch (error) {
+                console.error('Fallback synth failed:', error);
+            }
+        }
+        
+        async function initializeAudioContext() {
+            if (!audioInitialized) {
+                try {
+                    await Tone.start();
+                    audioInitialized = true;
+                    console.log('Audio context started');
+                } catch (error) {
+                    console.error('Error starting audio context:', error);
+                }
+            }
+        }
+        
         function onMouseMove(event) {
             event.preventDefault();
             
@@ -313,31 +466,24 @@
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
             
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(hitboxObjects, true);
+            const intersects = raycaster.intersectObjects(interactableObjects, true);
             
             if (intersects.length > 0) {
-                const intersectedHitbox = intersects[0].object;
+                const intersectedObject = intersects[0].object;
                 
-                if (hoveredZone !== intersectedHitbox) {
-                    // Clear previous highlighting
+                if (hoveredObject !== intersectedObject) {
                     clearHighlights();
-                    
-                    // Set new hovered zone and highlight associated objects
-                    hoveredZone = intersectedHitbox;
-                    const associatedObjects = interactionZones.get(intersectedHitbox);
-                    if (associatedObjects) {
-                        highlightObjects(associatedObjects);
-                    }
-                    
+                    hoveredObject = intersectedObject;
+                    highlightRelatedObjects(intersectedObject);
                     sceneContainer.classList.add('clickable-cursor');
-                    showTooltip(event, getZoneName(intersectedHitbox));
+                    showTooltip(event, getZoneName(intersectedObject));
                 }
                 
                 updateTooltip(event);
             } else {
-                if (hoveredZone) {
+                if (hoveredObject) {
                     clearHighlights();
-                    hoveredZone = null;
+                    hoveredObject = null;
                     sceneContainer.classList.remove('clickable-cursor');
                     hideTooltip();
                 }
@@ -346,17 +492,18 @@
         
         function onMouseClick(event) {
             event.preventDefault();
+            initializeAudioContext();
             
             const rect = sceneContainer.getBoundingClientRect();
             mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
             
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(hitboxObjects, true);
+            const intersects = raycaster.intersectObjects(interactableObjects, true);
             
             if (intersects.length > 0) {
-                const clickedHitbox = intersects[0].object;
-                handleZoneClick(clickedHitbox);
+                const clickedObject = intersects[0].object;
+                handleObjectClick(clickedObject);
             }
         }
         
@@ -370,93 +517,179 @@
         }
         
         function onTouchEnd(event) {
+            initializeAudioContext();
+            
             if (event.changedTouches.length === 1) {
                 raycaster.setFromCamera(mouse, camera);
-                const intersects = raycaster.intersectObjects(hitboxObjects, true);
+                const intersects = raycaster.intersectObjects(interactableObjects, true);
                 
                 if (intersects.length > 0) {
-                    const clickedHitbox = intersects[0].object;
-                    handleZoneClick(clickedHitbox);
+                    const clickedObject = intersects[0].object;
+                    handleObjectClick(clickedObject);
                 }
             }
         }
         
-        function handleZoneClick(hitbox) {
-            const zoneName = getZoneName(hitbox);
-            console.log('Clicked on zone:', zoneName);
+        function highlightRelatedObjects(clickedObject) {
+            const objectName = clickedObject.name.toLowerCase();
+            let objectsToHighlight = [];
             
-            // Handle different interaction zones
-            if (zoneName.includes('Piano Key')) {
-                // Handle individual piano key clicks
-                handlePianoKeyClick(hitbox);
-            } else {
-                switch(zoneName) {
-                    case 'Laptop':
-                        handleLaptopClickLocal();
-                        break;
-                    case 'Badminton':
-                        handleBadmintonClickLocal();
-                        break;
-                    case 'Calendar':
-                        handleCalendarClickLocal();
-                        break;
-                    case 'Certificate':
-                        handleCertificateClickLocal();
-                        break;
-                    case 'Piano':
-                        handlePianoClickLocal();
-                        break;
-                    default:
-                        console.log('Unknown zone:', zoneName);
-                }
+            if (objectName.includes('laptop_hitbox')) {
+                objectsToHighlight = allObjects.filter(obj => 
+                    obj.name.toLowerCase().includes('macbook') && 
+                    !obj.name.toLowerCase().includes('hitbox')
+                );
+            } else if (objectName.includes('badminton_hitbox')) {
+                objectsToHighlight = allObjects.filter(obj => 
+                    obj.name.toLowerCase().includes('racquet') && 
+                    !obj.name.toLowerCase().includes('hitbox')
+                );
+            } else if (objectName.includes('calendar_hitbox')) {
+                objectsToHighlight = allObjects.filter(obj => 
+                    obj.name.toLowerCase().includes('calendar') && 
+                    !obj.name.toLowerCase().includes('hitbox')
+                );
+            } else if (objectName.includes('certificate_hitbox')) {
+                objectsToHighlight = [clickedObject];
+            } else if (objectName.includes('piano_zone') && !objectName.includes('piano_zone_')) {
+                objectsToHighlight = allObjects.filter(obj => 
+                    obj.name.toLowerCase().includes('piano') && 
+                    !obj.name.toLowerCase().includes('zone') &&
+                    !obj.name.toLowerCase().includes('hitbox')
+                );
+            } else if (objectName.includes('piano') && !objectName.includes('zone')) {
+                objectsToHighlight = [clickedObject];
             }
-        }
-        
-        function handlePianoKeyClick(key) {
-            const keyName = key.name;
-            console.log('Piano key clicked:', keyName);
             
-            // You could play different notes based on the key
-            // For now, just show which key was pressed
-            const isSharp = keyName.toLowerCase().includes('sharp');
-            const note = isSharp ? 'Sharp Note' : 'Natural Note';
-            
-            // Brief visual feedback
-            const originalMaterial = key.material;
-            key.material = new THREE.MeshStandardMaterial({
-                color: isSharp ? 0x444444 : 0xeeeeee,
-                emissive: isSharp ? 0x220000 : 0x002200,
-            });
-            
-            setTimeout(() => {
-                key.material = originalMaterial;
-            }, 10);
-            
-            console.log(`Played ${note}: ${keyName}`);
-        }
-        
-        function getZoneName(hitbox) {
-            const name = hitbox.name.toLowerCase();
-            if (name.includes('laptop_hitbox')) return 'Laptop';
-            if (name.includes('badminton_hitbox')) return 'Badminton';
-            if (name.includes('calendar_hitbox')) return 'Calendar';
-            if (name.includes('certificate_hitbox')) return 'Certificate';
-            if (name.includes('piano') && !name.includes('zone')) {
-                // Individual piano key
-                if (name.includes('sharp')) return 'Piano Key (Sharp)';
-                return 'Piano Key';
-            }
-            return 'Interactive Object';
-        }
-        
-        function highlightObjects(objects) {
-            objects.forEach(obj => {
+            objectsToHighlight.forEach(obj => {
                 if (!originalMaterials.has(obj)) {
                     originalMaterials.set(obj, obj.material);
                 }
                 obj.material = highlightMaterial.clone();
                 highlightedObjects.push(obj);
             });
+            
+            console.log(`Highlighting ${objectsToHighlight.length} objects for "${clickedObject.name}"`);
+        }
+        
+        function handleObjectClick(clickedObject) {
+            const objectName = clickedObject.name.toLowerCase();
+            const zoneName = getZoneName(clickedObject);
+            console.log('Clicked on:', zoneName, '(' + clickedObject.name + ')');
+            
+            if (zoneName.includes('Piano Key')) {
+                handlePianoKeyClick(clickedObject);
+            } else if (objectName.includes('laptop_hitbox')) {
+                handleLaptopClick();
+            } else if (objectName.includes('badminton_hitbox')) {
+                handleBadmintonClick();
+            } else if (objectName.includes('calendar_hitbox')) {
+                handleCalendarClick();
+            } else if (objectName.includes('certificate_hitbox')) {
+                handleCertificateClick();
+            } else if (objectName.includes('piano_zone')) {
+                handlePianoClick();
+            }
+        }
+        
+        async function handlePianoKeyClick(key) {
+            const keyName = key.name;
+            console.log('Piano key clicked:', keyName);
+            
+            await initializeAudioContext();
+            
+            if (!pianoSampler) {
+                console.error('Piano sampler not initialized');
+                return;
+            }
+            
+            const note = parseKeyName(keyName);
+            if (note && PIANO_NOTES.includes(note)) {
+                // Play the note with dynamic velocity
+                const velocity = 0.7 + Math.random() * 0.3; // Random velocity for natural sound
+                pianoSampler.triggerAttackRelease(note, '0.5', undefined, velocity);
+                console.log(`Playing note: ${note} (velocity: ${velocity.toFixed(2)})`);
+                
+                // Visual feedback
+                const isSharp = note.includes('#');
+                const originalMaterial = key.material;
+                
+                if (!originalMaterials.has(key)) {
+                    originalMaterials.set(key, originalMaterial);
+                }
+                
+                // Apply pressed visual
+                key.material = new THREE.MeshStandardMaterial({
+                    color: isSharp ? 0x222222 : 0xcccccc,
+                    emissive: isSharp ? 0x220000 : 0x002200,
+                });
+                
+                // Return to normal after delay
+                setTimeout(() => {
+                    key.material = originalMaterials.get(key);
+                }, 200);
+            } else {
+                console.warn('Could not parse or find note from key name:', keyName);
+                console.log('Available notes:', PIANO_NOTES.slice(0, 10), '...');
+            }
+        }
+        
+        function parseKeyName(keyName) {
+            const name = keyName.toLowerCase();
+            console.log('Parsing key name:', name);
+            
+            // Try all patterns
+            for (const [pattern, noteFunction] of Object.entries(KEY_NAME_PATTERNS)) {
+                if (name.includes(pattern)) {
+                    // Extract octave number
+                    const octaveMatch = name.match(/(\d+)/);
+                    if (octaveMatch) {
+                        const octave = octaveMatch[1];
+                        const note = noteFunction(octave);
+                        
+                        // Validate note exists in our range
+                        if (PIANO_NOTES.includes(note)) {
+                            console.log(`Parsed "${keyName}" -> "${note}"`);
+                            return note;
+                        }
+                    }
+                }
+            }
+            
+            // Fallback: try direct pattern matching
+            const directMatch = name.match(/piano_([a-g])(#|sharp)?(\d+)/);
+            if (directMatch) {
+                const noteName = directMatch[1].toUpperCase();
+                const isSharp = directMatch[2] !== undefined;
+                const octave = directMatch[3];
+                const fullNote = isSharp ? `${noteName}#${octave}` : `${noteName}${octave}`;
+                
+                if (PIANO_NOTES.includes(fullNote)) {
+                    console.log(`Direct parsed "${keyName}" -> "${fullNote}"`);
+                    return fullNote;
+                }
+            }
+            
+            console.warn('Could not parse key name:', keyName);
+            return null;
+        }
+        
+        function getZoneName(object) {
+            const name = object.name.toLowerCase();
+            if (name.includes('laptop_hitbox')) return 'Laptop';
+            if (name.includes('badminton_hitbox')) return 'Badminton';
+            if (name.includes('calendar_hitbox')) return 'Calendar';
+            if (name.includes('certificate_hitbox')) return 'Certificate';
+            if (name.includes('piano_zone')) return 'Piano';
+            if (name.includes('piano') && !name.includes('zone')) {
+                const note = parseKeyName(object.name);
+                if (note) {
+                    return `Piano Key (${note})`;
+                }
+                if (name.includes('sharp')) return 'Piano Key (Sharp)';
+                return 'Piano Key';
+            }
+            return 'Interactive Object';
         }
         
         function clearHighlights() {
@@ -466,27 +699,6 @@
                 }
             });
             highlightedObjects = [];
-        }
-        
-        // Interaction handlers for each zone
-        function handleLaptopClickLocal() {
-            handleLaptopClick();
-        }
-        
-        function handleBadmintonClickLocal() {
-            handleBadmintonClick();
-        }
-        
-        function handleCalendarClickLocal() {
-            handleCalendarClick();
-        }
-        
-        function handleCertificateClickLocal() {
-            handleCertificateClick();
-        }
-        
-        function handlePianoClickLocal() {
-            handlePianoClick();
         }
         
         function showTooltip(event, zoneName = 'item') {
@@ -509,63 +721,246 @@
             }, 300);
         }
         
-        function setupInteractionZones(objectsByType) {
-            // Map laptop hitboxes to MacBook objects
-            objectsByType.laptop_hitbox.forEach(hitbox => {
-                interactionZones.set(hitbox, objectsByType.macbook);
-                hitboxObjects.push(hitbox);
-                hitbox.visible = false;
-            });
-            
-            // Map badminton hitboxes to racquet objects (includes shuttlecocks)
-            objectsByType.badminton_hitbox.forEach(hitbox => {
-                interactionZones.set(hitbox, objectsByType.racquet);
-                hitboxObjects.push(hitbox);
-                hitbox.visible = false;
-            });
-            
-            // Map calendar hitboxes to calendar objects
-            objectsByType.calendar_hitbox.forEach(hitbox => {
-                interactionZones.set(hitbox, objectsByType.calendar);
-                hitboxObjects.push(hitbox);
-                hitbox.visible = false;
-            });
-            
-            // Certificate objects are their own hitboxes
-            objectsByType.certificate_hitbox.forEach(cert => {
-                interactionZones.set(cert, [cert]);
-                hitboxObjects.push(cert);
-            });
-            
-            // Piano: Set up individual key highlighting + general piano hitbox
-            // Individual piano keys
-            objectsByType.piano_keys.forEach(key => {
-                interactionZones.set(key, [key]); // Each key highlights only itself
-                hitboxObjects.push(key);
-            });
-            
-            // General piano hitboxes (for showing piano modal)
-            objectsByType.piano_hitbox.forEach(hitbox => {
-                const allPianoVisibleObjects = [...objectsByType.piano_visible, ...objectsByType.piano_keys];
-                interactionZones.set(hitbox, allPianoVisibleObjects);
-                hitboxObjects.push(hitbox);
-                hitbox.visible = false;
-            });
-            
-            // Piano visible objects (body, monitor, buttons) remain visible and don't need hitboxes
-            
-            console.log('Interaction zones setup complete:');
-            console.log('- Laptop zones:', objectsByType.laptop_hitbox.length);
-            console.log('- MacBook objects:', objectsByType.macbook.length);
-            console.log('- Badminton zones:', objectsByType.badminton_hitbox.length);
-            console.log('- Racquet objects (including shuttles):', objectsByType.racquet.length);
-            console.log('- Calendar zones:', objectsByType.calendar_hitbox.length);
-            console.log('- Calendar objects:', objectsByType.calendar.length);
-            console.log('- Certificate zones:', objectsByType.certificate_hitbox.length);
-            console.log('- Piano keys (individual):', objectsByType.piano_keys.length);
-            console.log('- Piano visible objects:', objectsByType.piano_visible.length);
-            console.log('- Piano hitboxes:', objectsByType.piano_hitbox.length);
+        // Interaction handlers
+        function handleLaptopClick() {
+            console.log('Laptop clicked - opening portfolio website...');
+            showModal('Laptop', `
+                <h3>💻 My Development Setup</h3>
+                <p>This is my trusty MacBook where I code my projects!</p>
+                <ul>
+                    <li>React & Next.js Applications</li>
+                    <li>Python Data Science Projects</li>
+                    <li>3D Web Experiences with Three.js</li>
+                    <li>Mobile Apps with React Native</li>
+                </ul>
+                <button onclick="window.open('https://github.com/pafool', '_blank')">
+                    View My GitHub
+                </button>
+            `);
         }
+        
+        function handleBadmintonClick() {
+            console.log('Badminton gear clicked - showing sports achievements...');
+            showModal('Badminton', `
+                <h3>🏸 Sports & Recreation</h3>
+                <p>Badminton is one of my favorite sports!</p>
+                <ul>
+                    <li>University Badminton Team Member</li>
+                    <li>Local Tournament Participant</li>
+                    <li>Doubles Specialist</li>
+                    <li>Weekend League Player</li>
+                </ul>
+                <p>Sports teach discipline, teamwork, and perseverance - values I bring to my work.</p>
+            `);
+        }
+        
+        function handleCalendarClick() {
+            console.log('Calendar clicked - showing schedule...');
+            showModal('Calendar', `
+                <h3>📅 My Schedule</h3>
+                <p>Here's what I'm currently working on:</p>
+                <div class="schedule">
+                    <div class="schedule-item">
+                        <strong>This Week:</strong> Final year project development
+                    </div>
+                    <div class="schedule-item">
+                        <strong>Upcoming:</strong> Job interviews and portfolio reviews
+                    </div>
+                    <div class="schedule-item">
+                        <strong>Goals:</strong> Launch personal website and mobile app
+                    </div>
+                </div>
+                <p>Always planning ahead and staying organized!</p>
+            `);
+        }
+        
+        function handleCertificateClick() {
+            console.log('Certificate clicked - showing credentials...');
+            showModal('Certificates', `
+                <h3>🏆 Certifications & Achievements</h3>
+                <p>Here are some of my achievements/awards:</p>
+                <ul>
+                    <li>Coming soon!</li>
+                </ul>
+            `);
+        }
+        
+        function handlePianoClick() {
+            console.log('Piano clicked - showing music projects...');
+            showModal('Piano', `
+                <h3>🎹 Music & Creativity</h3>
+                <p>Music is my creative outlet and source of inspiration!</p>
+                <ul>
+                    <li>Self-taught pianist (5+ years)</li>
+                    <li>Compose original pieces</li>
+                    <li>Record and produce music</li>
+                    <li>Perform at local events</li>
+                </ul>
+                <p>Music enhances my creativity and problem-solving skills in programming.</p>
+                <p><strong>🎹 All 88 piano keys are now functional with real note sounds!</strong></p>
+                <button onclick="playPianoDemo()">🎵 Play Demo Scale</button>
+            `);
+        }
+        
+        // Piano demo function
+        window.playPianoDemo = async function() {
+            await initializeAudioContext();
+            if (!pianoSampler) return;
+            
+            const demoNotes = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+            let delay = 0;
+            
+            demoNotes.forEach((note, index) => {
+                setTimeout(() => {
+                    pianoSampler.triggerAttackRelease(note, '0.5');
+                }, delay);
+                delay += 300;
+            });
+        };
+        
+        function showModal(title, content) {
+            const existingModal = document.getElementById('interaction-modal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            const modalHTML = `
+                <div id="interaction-modal" class="modal-overlay">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>${title}</h2>
+                            <button class="modal-close" onclick="closeModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            ${content}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            if (!document.getElementById('modal-styles')) {
+                const styles = `
+                    <style id="modal-styles">
+                        .modal-overlay {
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background: rgba(0, 0, 0, 0.8);
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            z-index: 1000;
+                            backdrop-filter: blur(5px);
+                        }
+                        
+                        .modal-content {
+                            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                            border-radius: 15px;
+                            max-width: 500px;
+                            width: 90%;
+                            max-height: 80vh;
+                            overflow-y: auto;
+                            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                            color: white;
+                        }
+                        
+                        .modal-header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            padding: 20px;
+                            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                        }
+                        
+                        .modal-header h2 {
+                            margin: 0;
+                            font-size: 24px;
+                        }
+                        
+                        .modal-close {
+                            background: none;
+                            border: none;
+                            color: white;
+                            font-size: 30px;
+                            cursor: pointer;
+                            width: 40px;
+                            height: 40px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            border-radius: 50%;
+                            transition: background 0.3s ease;
+                        }
+                        
+                        .modal-close:hover {
+                            background: rgba(255, 255, 255, 0.2);
+                        }
+                        
+                        .modal-body {
+                            padding: 20px;
+                        }
+                        
+                        .modal-body ul {
+                            padding-left: 20px;
+                            margin: 15px 0;
+                        }
+                        
+                        .modal-body li {
+                            margin: 8px 0;
+                        }
+                        
+                        .modal-body button {
+                            background: rgba(255, 255, 255, 0.2);
+                            border: 1px solid rgba(255, 255, 255, 0.3);
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 25px;
+                            cursor: pointer;
+                            margin: 10px 5px 0 0;
+                            transition: all 0.3s ease;
+                        }
+                        
+                        .modal-body button:hover {
+                            background: rgba(255, 255, 255, 0.3);
+                            transform: translateY(-2px);
+                        }
+                        
+                        .schedule-item {
+                            background: rgba(255, 255, 255, 0.1);
+                            padding: 10px;
+                            margin: 8px 0;
+                            border-radius: 8px;
+                            border-left: 3px solid #4a90e2;
+                        }
+                    </style>
+                `;
+                document.head.insertAdjacentHTML('beforeend', styles);
+            }
+        }
+        
+        window.closeModal = function() {
+            const modal = document.getElementById('interaction-modal');
+            if (modal) {
+                modal.remove();
+            }
+        };
+        
+        // Event listeners for modal
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                closeModal();
+            }
+        });
+        
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
         
         function setupLighting() {
             const ambientLight = new THREE.AmbientLight(0x404040, 3);
@@ -631,20 +1026,6 @@
                 function (gltf) {
                     loadedModel = gltf.scene;
                     
-                    // First pass: collect all objects by type
-                    const objectsByType = {
-                        laptop_hitbox: [],
-                        macbook: [],
-                        badminton_hitbox: [],
-                        racquet: [],
-                        calendar_hitbox: [],
-                        calendar: [],
-                        certificate_hitbox: [],
-                        piano_hitbox: [],
-                        piano_visible: [],
-                        piano_keys: []
-                    };
-                    
                     loadedModel.traverse(function (child) {
                         if (child.isMesh) {
                             child.castShadow = true;
@@ -655,44 +1036,37 @@
                                 child.material.side = THREE.DoubleSide;
                             }
                             
+                            allObjects.push(child);
+                            
                             if (child.name) {
                                 const objectName = child.name.toLowerCase();
                                 
-                                // Categorize objects based on naming conventions
-                                if (objectName.includes('laptop_hitbox')) {
-                                    objectsByType.laptop_hitbox.push(child);
-                                } else if (objectName.includes('macbook')) {
-                                    objectsByType.macbook.push(child);
-                                } else if (objectName.includes('badminton_hitbox')) {
-                                    objectsByType.badminton_hitbox.push(child);
-                                } else if (objectName.includes('racquet')) {
-                                    objectsByType.racquet.push(child);
-                                } else if (objectName.includes('calendar_hitbox')) {
-                                    objectsByType.calendar_hitbox.push(child);
-                                } else if (objectName.includes('calendar')) {
-                                    objectsByType.calendar.push(child);
-                                } else if (objectName.includes('certificate_hitbox')) {
-                                    objectsByType.certificate_hitbox.push(child);
-                                } else if (objectName.includes('piano_zone') && !objectName.includes('piano_zone_')) {
-                                    // Pure piano_zone objects are hitboxes
-                                    objectsByType.piano_hitbox.push(child);
-                                } else if (objectName.includes('piano_zone_')) {
-                                    // piano_zone_body, piano_zone_monitor, etc. are visible objects
-                                    objectsByType.piano_visible.push(child);
-                                } else if (objectName.includes('piano') && !objectName.includes('zone')) {
-                                    // Individual piano keys
-                                    objectsByType.piano_keys.push(child);
+                                if (objectName.includes('hitbox') || 
+                                    objectName.includes('certificate') ||
+                                    (objectName.includes('piano') && !objectName.includes('zone_'))) {
+                                    
+                                    interactableObjects.push(child);
+                                    
+                                    if (objectName.includes('hitbox') || 
+                                        (objectName.includes('piano_zone') && !objectName.includes('piano_zone_'))) {
+                                        child.visible = false;
+                                    }
                                 }
                             }
                         }
                     });
                     
-                    // Set up interaction zones
-                    setupInteractionZones(objectsByType);
-                    
                     scene.add(loadedModel);
-                    console.log(`Set up ${interactionZones.size} interaction zones`);
-                    console.log(`Found ${hitboxObjects.length} hitbox objects`);
+                    console.log(`Found ${allObjects.length} total objects`);
+                    console.log(`Found ${interactableObjects.length} interactable objects`);
+                    
+                    // Log piano keys found
+                    const pianoKeys = interactableObjects.filter(obj => 
+                        obj.name.toLowerCase().includes('piano') && !obj.name.toLowerCase().includes('zone')
+                    );
+                    console.log(`Found ${pianoKeys.length} piano keys:`);
+                    pianoKeys.forEach(key => console.log(`- ${key.name}`));
+                    
                     hideLoading();
                 },
                 
@@ -755,19 +1129,17 @@
         }
         
         function highlightClickables() {
-            if (hitboxObjects.length === 0) {
+            if (interactableObjects.length === 0) {
                 alert('No interactive zones found in the model.');
                 return;
             }
             
-            console.log('Highlighting all interaction zones...');
+            console.log('Highlighting all interactive objects...');
             
-            // Highlight all objects in all interaction zones
-            interactionZones.forEach((objects, hitbox) => {
-                highlightObjects(objects);
+            interactableObjects.forEach(obj => {
+                highlightRelatedObjects(obj);
             });
             
-            // Remove highlighting after 3 seconds
             setTimeout(() => {
                 clearHighlights();
             }, 3000);
